@@ -1,0 +1,7 @@
+TableA,ColumnA,TableB,ColumnB,Cardinality
+goals_by_day,DIRECTORKEYDAY,director_goals_by_day,DIRECTORKEYDAY,Many to One
+goals_by_day,REPKEYDAY,performance_by_day,REPKEY,Many to One
+goals_by_day,TARGETDAY,calendar_by_day,DATEVALUEDAY,Many to One
+goals_by_day,REPKEYDAY,early_cancellation,SALESREPDAY,One to Many
+detailes,ENROLLDATE,calendar_by_day,DAILYDATE,Many to One
+

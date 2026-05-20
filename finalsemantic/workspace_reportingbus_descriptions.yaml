@@ -1,0 +1,479 @@
+version: '1.0'
+catalog: workspace
+schema: reportingbus
+purpose: >
+  Sales performance reporting for a debt enrollment business (program: JGW).
+  Sales reps enroll clients into a debt relief program. KPIs track enrollments,
+  enrolled debt, early cancellations, and pacing against monthly goals.
+  Three sales teams exist: Alpha, Beta, Gamma — each with a director.
+
+observed_data_note: >
+  Warehouse inspection on 2026-05-20 showed that the uploaded `goals_by_day`
+  table currently stores one target row per rep-month for totals, even though
+  several column names still imply day-grain keys. Use month + rep joins for
+  full-period goal rollups unless daily target rows are explicitly verified.
+
+tables:
+
+  - name: calendar_by_day
+    description: >
+      Date dimension table. One row per working day. Used to join all other
+      tables to a calendar context. Always join here using DATEVALUEDAY to
+      get the working-day version of a date, or DAILYDATE for the actual date.
+      DAYSINMONTH reflects working days only (typically 22), not calendar days.
+      Use this table to filter by month (DATEVALUE) or by specific day (DATEVALUEDAY).
+    grain: one row per working day
+    primary_use: date filtering, time-series axis, month completion calculations
+    columns:
+      - name: DATE
+        description: Human-readable month label. Example: Jan-2025. Use for display only.
+        role: dimension
+      - name: DATEVALUE
+        description: >
+          Numeric month identifier in YYYYMM format. Example: 202501 = January 2025.
+          Use this to filter or group by month across all tables.
+        role: date
+        format: YYYYMM
+      - name: EOM
+        description: End of month date for this row. Example: 01/31/2025 for all Jan-2025 rows.
+        role: date
+      - name: DAILYDATE
+        description: >
+          The actual calendar date for this row. Example: 01/06/2025.
+          Use to join with detailes.EnrollDate.
+        role: date
+      - name: DAYSPAST
+        description: >
+          How many working days have passed in this month as of this date.
+          Example: on Jan 6 the value is 6 (working days). Use to calculate
+          month-to-date progress.
+        role: measure
+        aggregation: MAX
+      - name: DAYSINMONTH
+        description: >
+          Total working days in this month. Always 22 in this dataset.
+          Use as the denominator for month completion percentage.
+        role: measure
+        aggregation: MAX
+      - name: DATEVALUEDAY
+        description: >
+          Composite date key in YYYYMMDD format. Example: 20250106.
+          This is the join key between calendar_by_day and goals_by_day (TARGETDAY)
+          and performance_by_day (RANKDAYVALUE). Never aggregate this column.
+        role: key
+        format: YYYYMMDD
+
+  - name: detailes
+    description: >
+      Client-level snapshot table. One row per client per month showing their
+      enrollment status and debt figures for that month. This is the source of
+      truth for active client counts and enrolled debt balances.
+      A client appears every month they are in the program. Cancelled clients
+      still appear in the month they cancelled with CurrentEnrolledDebt = 0.
+      Program is always JGW in this dataset.
+      Do not SUM OriginalEnrolledDebt across months for the same client —
+      it will double count. Use MAX per client or filter to one month.
+    grain: one row per client per month (ClientID + Date)
+    primary_use: active client counts, enrolled debt balances, cancellation tracking
+    columns:
+      - name: OriginalRep
+        description: Name of the sales rep who originally enrolled this client.
+        role: dimension
+      - name: ClientID
+        description: Unique client identifier. Never aggregate. Use for COUNT DISTINCT.
+        role: key
+      - name: FirstName
+        description: Client first name. Display only.
+        role: dimension
+      - name: LastName
+        description: Client last name. Display only.
+        role: dimension
+      - name: EnrollDate
+        description: >
+          The actual date this client was enrolled. Joins to calendar_by_day.DAILYDATE.
+          Use to filter clients enrolled in a specific time period.
+        role: date
+      - name: Date
+        description: >
+          Month this record represents in YYYYMM format. Example: 202501.
+          Use to filter to a specific month. Joins to calendar_by_day.DATEVALUE.
+        role: date
+        format: YYYYMM
+      - name: OriginalEnrolledDebt
+        description: >
+          Debt amount at the time of enrollment. Does not change after enrollment.
+          Do not SUM across months for the same client — use MAX or filter to
+          the enrollment month only.
+        role: measure
+        aggregation: SUM (within one month only)
+      - name: CurrentEnrolledDebt
+        description: >
+          Current outstanding enrolled debt for this client in this month.
+          Zero if the client has cancelled. SUM this to get total active debt
+          for a given month.
+        role: measure
+        aggregation: SUM
+      - name: EOMEnrolledDebt
+        description: >
+          Enrolled debt at end of month. Use for month-end snapshots and
+          trend reporting across months.
+        role: measure
+        aggregation: SUM
+      - name: ClientStatus
+        description: >
+          Current status of the client. Values: Active, Cancelled.
+          Filter to Active for current enrolled debt totals.
+        role: dimension
+        values: [Active, Cancelled]
+      - name: CancelDate
+        description: Date client cancelled. Null if still active.
+        role: date
+      - name: Program
+        description: >
+          Debt relief program the client is enrolled in. Always JGW in this dataset.
+        role: dimension
+        values: [JGW]
+
+  - name: director_goals_by_day
+    description: >
+      Daily pro-rated enrollment goals at the director (team) level.
+      One row per director per working day. DIRECTORGOAL is the full
+      monthly enrollment target for the director's team. DIRECTORGOALDAY
+      is that monthly goal divided by working days — the daily target.
+      The three directors are Alan Day (Alpha team), Bryan Reed (Beta team),
+      and Brian Derenda (Gamma team).
+      To get a director's cumulative goal to date: SUM(DIRECTORGOALDAY)
+      filtered to days up to today within the month.
+      Do not SUM DIRECTORGOAL — it is the same monthly value repeated
+      every day and will inflate massively.
+    grain: one row per director per working day (DIRECTORKEYDAY)
+    primary_use: director-level goal tracking, team pacing vs goal
+    columns:
+      - name: DIRECTORKEY
+        description: >
+          Composite key for director + month. Format: YYYYMM_DirectorName.
+          Example: 202501_Alan Day. Never aggregate. Join to goals_by_day.DIRECTORKEY.
+        role: key
+      - name: DIRECTORKEYDAY
+        description: >
+          Composite key for director + specific day. Format: YYYYMMDD_DirectorName.
+          Example: 20250101_Alan Day. Primary join key to goals_by_day.DIRECTORKEYDAY.
+          Never aggregate.
+        role: key
+      - name: TEAM
+        description: >
+          Director name used as team label. Values: Alan Day, Bryan Reed, Brian Derenda.
+          Note: TEAM here refers to the director name, not the team name (Alpha/Beta/Gamma).
+          Team names (Alpha/Beta/Gamma) are in goals_by_day.TEAM.
+        role: dimension
+        values: [Alan Day, Bryan Reed, Brian Derenda]
+      - name: DIRECTORGOAL
+        description: >
+          Total monthly enrollment goal for this director's team.
+          This is the SAME value repeated for every day in the month.
+          Never SUM across days — use MAX to get the monthly goal.
+        role: measure
+        aggregation: MAX (never SUM — same value repeated every day)
+      - name: GOALDATE
+        description: Month of this goal record in YYYYMM format.
+        role: date
+        format: YYYYMM
+      - name: GOALDAY
+        description: Specific working day in YYYYMMDD format.
+        role: date
+        format: YYYYMMDD
+      - name: DIRECTORGOALDAY
+        description: >
+          Daily pro-rated enrollment goal for this director.
+          This is DIRECTORGOAL divided by working days in month.
+          SUM this across working days to get cumulative goal to date.
+        role: measure
+        aggregation: SUM
+      - name: DAYSINMONTH
+        description: >
+          Number of working days in this month. Always 22 in this dataset.
+          Same value repeated every row. Use MAX.
+        role: measure
+        aggregation: MAX
+
+  - name: early_cancellation
+    description: >
+      Transactional table of early cancellations. One row per cancelled client.
+      A client appears here only once — when they cancel within the early
+      cancellation window (typically within 30 days of enrollment).
+      Date is the enrollment month (not the cancel month).
+      Three cancellation reasons exist: Buyer Remorse, Financial Hardship,
+      Not Responsive. Use this table for cancellation reason analysis and
+      days-to-cancel metrics. For simple cancel counts by rep, performance_by_day
+      already has EARLYCANCELLATION aggregated.
+    grain: one row per cancelled client (ClientID)
+    primary_use: cancellation reason breakdown, days-to-cancel analysis
+    columns:
+      - name: Date
+        description: >
+          Enrollment month of the cancelled client in YYYYMM format.
+          This is NOT the cancellation month — it is the month the
+          client was enrolled. Use to group cancellations by enrollment cohort.
+        role: date
+        format: YYYYMM
+      - name: SaleRep
+        description: Name of the sales rep who enrolled the cancelled client.
+        role: dimension
+      - name: EnrollDate
+        description: Actual enrollment date of the cancelled client.
+        role: date
+      - name: ClientID
+        description: Unique client identifier. Never aggregate.
+        role: key
+      - name: ClientStatus
+        description: Always Cancelled in this table.
+        role: dimension
+        values: [Cancelled]
+      - name: CancelDate
+        description: Date the client cancelled.
+        role: date
+      - name: Cancel
+        description: Always 1. Flag indicating a cancellation occurred.
+        role: measure
+        aggregation: SUM
+      - name: DaysToCancel
+        description: >
+          Number of days between EnrollDate and CancelDate.
+          Use AVG for average days to cancel by rep or reason.
+        role: measure
+        aggregation: AVG
+      - name: EarlyCancellation
+        description: >
+          Always 1 in this table. Indicates this is an early cancellation.
+          SUM to count early cancellations.
+        role: measure
+        aggregation: SUM
+      - name: CancelledDebt
+        description: Amount of debt that was cancelled with this client.
+        role: measure
+        aggregation: SUM
+      - name: Program
+        description: Debt relief program. Always JGW.
+        role: dimension
+        values: [JGW]
+      - name: CANCELREASON
+        description: >
+          Reason for cancellation. Use for breakdown analysis.
+          Values: Buyer Remorse, Financial Hardship, Not Responsive.
+        role: dimension
+        values: [Buyer Remorse, Financial Hardship, Not Responsive]
+      - name: SALESREPDAY
+        description: >
+          Composite key for rep + enrollment day. Format: YYYYMMDD_RepName.
+          Example: 20250101_Naddia Bazar. Joins to goals_by_day.REPKEYDAY.
+          Never aggregate.
+        role: key
+
+  - name: goals_by_day
+    description: >
+      Enrollment and debt goals at the rep level.
+      In the currently uploaded warehouse data, target totals behave as one row
+      per rep per month. TARGETENROLLMENTS and TARGETDEBT should therefore be
+      treated as monthly values that can be summed across rep-month rows for
+      full-period totals. TARGETENROLLMENTSDAY and TARGETDEBTDAY still represent
+      pro-rated daily targets when those rows are present.
+      Three teams: Alpha (director: Alan Day), Beta (director: Bryan Reed),
+      Gamma (director: Brian Derenda).
+      For full-period team rollups in this upload, join performance_by_day to
+      goals_by_day on month + rep: p.RANKDATEVALUE = g.TARGETDATE and
+      p.ORIGINALREP = g.REP. Use REPKEYDAY only if daily-grain target rows are
+      explicitly confirmed.
+    grain: observed as one row per rep per month for target totals in current upload
+    primary_use: rep-level goal pacing, enrollment targets, debt targets
+    columns:
+      - name: REPKEY
+        description: >
+          Composite key for rep + month. Format: YYYYMM_RepName.
+          Example: 202501_Evan Baker. Never aggregate.
+        role: key
+      - name: REPKEYDAY
+        description: >
+          Composite key for rep + specific day. Format: YYYYMMDD_RepName.
+          Example: 20250101_Evan Baker. Primary join key to
+          performance_by_day.REPKEY. Never aggregate.
+        role: key
+      - name: REP
+        description: Sales rep name. Use for grouping and display.
+        role: dimension
+      - name: TEAM
+        description: >
+          Sales team name. Values: Alpha, Beta, Gamma.
+          Alpha reports to Alan Day, Beta to Bryan Reed, Gamma to Brian Derenda.
+        role: dimension
+        values: [Alpha, Beta, Gamma]
+      - name: TARGETENROLLMENTS
+        description: >
+          Full monthly enrollment target for this rep.
+          Same value repeated for every day in the month.
+          Never SUM across days — use MAX to get the monthly target.
+        role: measure
+        aggregation: MAX (never SUM — same value repeated every day)
+      - name: TARGETDEBT
+        description: >
+          Full monthly debt target for this rep in dollars.
+          In the current upload this behaves as a rep-month value and may be
+          summed across rep-month rows for multi-month totals.
+        role: measure
+        aggregation: MAX for one rep-month; SUM across rep-month rows for full-period totals
+      - name: TARGETDATE
+        description: Month of this goal record in YYYYMM format.
+        role: date
+        format: YYYYMM
+      - name: TARGETDAY
+        description: >
+          Specific working day in YYYYMMDD format.
+          Joins to calendar_by_day.DATEVALUEDAY.
+        role: key
+        format: YYYYMMDD
+      - name: TARGETENROLLMENTSDAY
+        description: >
+          Daily pro-rated enrollment target. Monthly target divided by
+          working days. SUM this across days to get cumulative goal to date.
+          Use in pacing calculations: SUM(NETENROLLMENTS) / SUM(TARGETENROLLMENTSDAY).
+        role: measure
+        aggregation: SUM
+      - name: TARGETDEBTDAY
+        description: >
+          Daily pro-rated debt target in dollars. Monthly target divided by
+          working days. SUM this across days to get cumulative debt goal to date.
+          Use in pacing: SUM(NETDEBT) / NULLIF(SUM(TARGETDEBTDAY), 0).
+        role: measure
+        aggregation: SUM
+      - name: DIRECTORKEY
+        description: >
+          Composite key for director + month. Joins to
+          director_goals_by_day.DIRECTORKEY. Never aggregate.
+        role: key
+      - name: DIRECTORKEYDAY
+        description: >
+          Composite key for director + specific day. Joins to
+          director_goals_by_day.DIRECTORKEYDAY. Never aggregate.
+        role: key
+
+  - name: performance_by_day
+    description: >
+      Daily enrollment and debt performance per sales rep.
+      One row per rep per working day — this is the primary fact table
+      for all rep performance KPIs. Each row shows how many enrollments
+      and how much debt that rep brought in on that specific day.
+      ENROLLMENTS is gross (before cancellations). NETENROLLMENTS is after
+      early cancellations. NETDEBT is after cancelled debt.
+      REPKEY is the join key to goals_by_day.REPKEYDAY — always join on this
+      for pacing calculations. Never join on rep name alone as casing differs
+      (ORIGINALREP is mixed case, REPKEY is uppercase).
+      To get month totals: SUM all rows for a rep where RANKDATEVALUE = target month.
+      Do not filter by RANKDATE (string) — filter by RANKDATEVALUE (integer YYYYMM).
+    grain: one row per rep per working day (REPKEY = YYYYMMDD_REPNAME uppercase)
+    primary_use: rep performance KPIs, enrollment counts, debt totals, cancellation counts
+    columns:
+      - name: REPKEY
+        description: >
+          Composite key for rep + specific day. Format: YYYYMMDD_REPNAME in uppercase.
+          Example: 20250101_EVAN BAKER. This is the join key to goals_by_day.REPKEYDAY.
+          Note: goals_by_day REPKEYDAY uses mixed case (Evan Baker) while
+          performance_by_day REPKEY uses uppercase (EVAN BAKER) — join with
+          UPPER() or use the relationship defined in schema.yaml.
+          Never aggregate.
+        role: key
+      - name: RANKDATE
+        description: >
+          Human-readable month label. Example: JAN-2025. Use for display only.
+          For filtering, use RANKDATEVALUE instead.
+        role: dimension
+      - name: RANKDATEVALUE
+        description: >
+          Month in YYYYMM format. Example: 202501. Use this to filter by month.
+          Joins to calendar_by_day.DATEVALUE and goals_by_day.TARGETDATE.
+        role: date
+        format: YYYYMM
+      - name: RANKDAYVALUE
+        description: >
+          Specific working day in YYYYMMDD format. Example: 20250101.
+          Joins to calendar_by_day.DATEVALUEDAY. Use to filter to a specific day.
+        role: date
+        format: YYYYMMDD
+      - name: ORIGINALREP
+        description: >
+          Sales rep name in mixed case. Example: Evan Baker.
+          Use for display and grouping. For joins, use REPKEY instead.
+        role: dimension
+      - name: ENROLLMENTS
+        description: >
+          Gross enrollments by this rep on this day. Includes clients who
+          later cancelled. SUM across days to get total gross enrollments.
+        role: measure
+        aggregation: SUM
+      - name: NETENROLLMENTS
+        description: >
+          Net enrollments after subtracting early cancellations.
+          This is the primary enrollment KPI. SUM across days for period totals.
+        role: measure
+        aggregation: SUM
+      - name: TOTALDEBT
+        description: >
+          Total gross enrolled debt brought in by this rep on this day.
+          Includes debt from clients who later cancelled.
+          SUM across days for period totals.
+        role: measure
+        aggregation: SUM
+      - name: NETDEBT
+        description: >
+          Net enrolled debt after subtracting cancelled debt.
+          This is the primary debt KPI. SUM across days for period totals.
+          Use in pacing: SUM(NETDEBT) vs SUM(TARGETDEBTDAY) from goals_by_day.
+        role: measure
+        aggregation: SUM
+      - name: EARLYCANCELLATION
+        description: >
+          Number of early cancellations by this rep on this day.
+          SUM across days for period totals. Divide by SUM(ENROLLMENTS)
+          for early cancellation rate.
+        role: measure
+        aggregation: SUM
+      - name: CANCELLEDDEBT
+        description: >
+          Debt amount cancelled by early cancellations on this day.
+          SUM across days for period totals.
+        role: measure
+        aggregation: SUM
+      - name: ENROLLDATE
+        description: >
+          Full date label for this row. Example: Wednesday, January 01, 2025.
+          For filtering use RANKDAYVALUE. This column is display only.
+        role: dimension
+
+join_guidance:
+  - description: Rep performance vs goal (pacing)
+    join: >
+      JOIN goals_by_day g ON p.RANKDATEVALUE = g.TARGETDATE AND p.ORIGINALREP = g.REP
+      WHERE p.RANKDATEVALUE = [month]
+    note: >
+      This month + rep join matches the observed uploaded data. Only switch to
+      UPPER(g.REPKEYDAY) = p.REPKEY after verifying that goals_by_day actually
+      contains daily target rows.
+
+  - description: Director team rollup
+    join: >
+      JOIN director_goals_by_day d ON g.DIRECTORKEYDAY = d.DIRECTORKEYDAY
+    note: >
+      Go through goals_by_day to reach director_goals_by_day. Never join
+      performance_by_day directly to director_goals_by_day.
+
+  - description: Monthly calendar context
+    join: >
+      JOIN calendar_by_day c ON p.RANKDAYVALUE = c.DATEVALUEDAY
+    note: >
+      Use DATEVALUEDAY (YYYYMMDD integer) not DAILYDATE (date) for joining
+      to performance_by_day and goals_by_day.
+
+  - description: Client detail lookup
+    join: >
+      JOIN detailes d ON d.Date = p.RANKDATEVALUE AND d.OriginalRep = p.ORIGINALREP
+    note: >
+      detailes is at client level. Joining to performance_by_day will fan out —
+      always aggregate detailes first or use it independently for client counts.

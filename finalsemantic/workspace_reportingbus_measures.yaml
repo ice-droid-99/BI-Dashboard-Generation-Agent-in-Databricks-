@@ -1,0 +1,369 @@
+version: '1.0'
+catalog: workspace
+schema: reportingbus
+purpose: >
+  Pre-defined measures for the reportingbus schema. The agent must always use
+  these expressions when writing dataset SQL. Never invent aggregations from
+  raw columns when a measure is defined here. Use the primary_table and
+  join_tables fields to construct the FROM and JOIN clauses.
+
+observed_data_note: >
+  The uploaded `goals_by_day` data currently behaves at rep-month grain for
+  target values, not rep-day grain. For full-period target totals, SUM of
+  `TARGETDEBT` or `TARGETENROLLMENTS` across `goals_by_day` is valid. Only use
+  the REPKEYDAY-based pacing joins when the source data actually contains daily
+  target rows.
+
+measures:
+
+  # ─────────────────────────────────────────────
+  # ENROLLMENT VOLUME
+  # primary table: performance_by_day
+  # ─────────────────────────────────────────────
+
+  - name: total_enrollments
+    label: "Total enrollments"
+    category: enrollment
+    primary_table: performance_by_day
+    expression: SUM(ENROLLMENTS)
+    format: integer
+    description: >
+      Gross enrollments including clients who later cancelled.
+      Filter by RANKDATEVALUE for a specific month.
+
+  - name: net_enrollments
+    label: "Net enrollments"
+    category: enrollment
+    primary_table: performance_by_day
+    expression: SUM(NETENROLLMENTS)
+    format: integer
+    description: >
+      Enrollments after subtracting early cancellations.
+      This is the primary enrollment KPI shown in dashboards.
+
+  - name: avg_daily_enrollments
+    label: "Avg daily enrollments"
+    category: enrollment
+    primary_table: performance_by_day
+    expression: "SUM(NETENROLLMENTS) / NULLIF(COUNT(DISTINCT RANKDAYVALUE), 0)"
+    format: decimal
+    description: Net enrollments divided by number of working days in the period.
+
+  - name: active_client_count
+    label: "Active client count"
+    category: enrollment
+    primary_table: detailes
+    expression: "COUNT(DISTINCT CASE WHEN ClientStatus = 'Active' THEN ClientID END)"
+    format: integer
+    description: >
+      Count of unique active clients. Filter by Date (YYYYMM) for a specific month.
+      Do not join to performance_by_day — use detailes independently.
+
+  - name: total_client_count
+    label: "Total clients (active + cancelled)"
+    category: enrollment
+    primary_table: detailes
+    expression: COUNT(DISTINCT ClientID)
+    format: integer
+    description: Total unique clients enrolled regardless of status.
+
+  # ─────────────────────────────────────────────
+  # DEBT / REVENUE
+  # primary table: performance_by_day
+  # ─────────────────────────────────────────────
+
+  - name: total_enrolled_debt
+    label: "Total enrolled debt"
+    category: debt
+    primary_table: performance_by_day
+    expression: SUM(TOTALDEBT)
+    format: currency
+    description: >
+      Gross enrolled debt including cancelled debt.
+      SUM across days within the filtered period.
+
+  - name: net_enrolled_debt
+    label: "Net enrolled debt"
+    category: debt
+    primary_table: performance_by_day
+    expression: SUM(NETDEBT)
+    format: currency
+    description: >
+      Enrolled debt after subtracting cancelled debt.
+      This is the primary debt KPI. SUM across days.
+
+  - name: avg_debt_per_enrollment
+    label: "Avg debt per enrollment"
+    category: debt
+    primary_table: performance_by_day
+    expression: "SUM(NETDEBT) / NULLIF(SUM(NETENROLLMENTS), 0)"
+    format: currency
+    description: Average net debt per net enrollment. Indicates deal size.
+
+  - name: cancelled_debt_total
+    label: "Cancelled debt"
+    category: debt
+    primary_table: performance_by_day
+    expression: SUM(CANCELLEDDEBT)
+    format: currency
+    description: Total debt lost to early cancellations.
+
+  - name: eom_enrolled_debt
+    label: "EOM enrolled debt"
+    category: debt
+    primary_table: detailes
+    expression: SUM(EOMEnrolledDebt)
+    format: currency
+    description: >
+      End of month enrolled debt balance. Use for month-over-month trend charts.
+      Filter by Date (YYYYMM). Do not mix with performance_by_day.
+
+  - name: current_enrolled_debt
+    label: "Current enrolled debt"
+    category: debt
+    primary_table: detailes
+    expression: "SUM(CASE WHEN ClientStatus = 'Active' THEN CurrentEnrolledDebt ELSE 0 END)"
+    format: currency
+    description: >
+      Current outstanding debt for active clients only.
+      Filter by Date (YYYYMM) for a snapshot month.
+
+  - name: debt_shrinkage
+    label: "Debt shrinkage"
+    category: debt
+    primary_table: detailes
+    expression: "SUM(OriginalEnrolledDebt) - SUM(CurrentEnrolledDebt)"
+    format: currency
+    description: >
+      Reduction in enrolled debt from original amount to current.
+      Positive value means debt has been reduced. Filter to one month only.
+
+  # ─────────────────────────────────────────────
+  # CANCELLATIONS
+  # primary table: performance_by_day or early_cancellation
+  # ─────────────────────────────────────────────
+
+  - name: early_cancel_count
+    label: "Early cancellations"
+    category: cancellation
+    primary_table: performance_by_day
+    expression: SUM(EARLYCANCELLATION)
+    format: integer
+    description: >
+      Count of early cancellations. Use performance_by_day for rep-level
+      and time-based aggregation. Use early_cancellation table for
+      reason breakdowns.
+
+  - name: early_cancel_rate
+    label: "Early cancellation rate"
+    category: cancellation
+    primary_table: performance_by_day
+    expression: "SUM(EARLYCANCELLATION) / NULLIF(SUM(ENROLLMENTS), 0)"
+    format: percent
+    description: >
+      Ratio of early cancellations to gross enrollments.
+      Key quality metric per rep.
+
+  - name: avg_days_to_cancel
+    label: "Avg days to cancel"
+    category: cancellation
+    primary_table: early_cancellation
+    expression: AVG(DaysToCancel)
+    format: decimal
+    description: >
+      Average number of days between enrollment and cancellation.
+      Use early_cancellation table. Can group by SaleRep or CANCELREASON.
+
+  - name: cancelled_debt_rate
+    label: "Cancelled debt rate"
+    category: cancellation
+    primary_table: performance_by_day
+    expression: "SUM(CANCELLEDDEBT) / NULLIF(SUM(TOTALDEBT), 0)"
+    format: percent
+    description: Ratio of cancelled debt to total gross enrolled debt.
+
+  - name: buyer_remorse_cancels
+    label: "Buyer remorse cancellations"
+    category: cancellation
+    primary_table: early_cancellation
+    expression: "SUM(CASE WHEN CANCELREASON = 'Buyer Remorse' THEN EarlyCancellation ELSE 0 END)"
+    format: integer
+    description: Count of cancellations with reason Buyer Remorse.
+
+  - name: financial_hardship_cancels
+    label: "Financial hardship cancellations"
+    category: cancellation
+    primary_table: early_cancellation
+    expression: "SUM(CASE WHEN CANCELREASON = 'Financial Hardship' THEN EarlyCancellation ELSE 0 END)"
+    format: integer
+    description: Count of cancellations with reason Financial Hardship.
+
+  - name: not_responsive_cancels
+    label: "Not responsive cancellations"
+    category: cancellation
+    primary_table: early_cancellation
+    expression: "SUM(CASE WHEN CANCELREASON = 'Not Responsive' THEN EarlyCancellation ELSE 0 END)"
+    format: integer
+    description: Count of cancellations with reason Not Responsive.
+
+  - name: cancel_reason_pct
+    label: "Cancellation reason %"
+    category: cancellation
+    primary_table: early_cancellation
+    expression: "COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0)"
+    format: percent
+    description: >
+      Percentage breakdown of cancellations by reason.
+      Group by CANCELREASON. Use for pie or bar chart of reasons.
+
+  # ─────────────────────────────────────────────
+  # GOAL PACING
+  # primary tables: goals_by_day + performance_by_day
+  # join: UPPER(goals_by_day.REPKEYDAY) = performance_by_day.REPKEY
+  # ─────────────────────────────────────────────
+
+  - name: target_enrollments_month
+    label: "Monthly enrollment target"
+    category: goal
+    primary_table: goals_by_day
+    expression: MAX(TARGETENROLLMENTS)
+    format: integer
+    description: >
+      Full monthly enrollment target per rep. Always use MAX — this value
+      is repeated every day and SUM will massively inflate it.
+      Filter by TARGETDATE (YYYYMM) for a specific month.
+
+  - name: target_debt_month
+    label: "Monthly debt target"
+    category: goal
+    primary_table: goals_by_day
+    expression: MAX(TARGETDEBT)
+    format: currency
+    description: >
+      Full monthly debt target per rep. For one specific rep-month use MAX.
+      In the currently uploaded data there is one target row per rep-month, so
+      full-period target totals can SUM(TARGETDEBT) across goals_by_day after
+      filtering to the desired month set.
+
+  - name: cumulative_enrollment_target
+    label: "Cumulative enrollment target to date"
+    category: goal
+    primary_table: goals_by_day
+    expression: SUM(TARGETENROLLMENTSDAY)
+    format: decimal
+    description: >
+      Running enrollment target up to a specific day. SUM TARGETENROLLMENTSDAY
+      for all working days up to the current day in the month.
+      Use as the denominator in enrollment pacing.
+
+  - name: cumulative_debt_target
+    label: "Cumulative debt target to date"
+    category: goal
+    primary_table: goals_by_day
+    expression: SUM(TARGETDEBTDAY)
+    format: currency
+    description: >
+      Running debt target up to a specific day. SUM TARGETDEBTDAY for all
+      working days up to the current day. Use as the denominator in debt pacing.
+
+  - name: enrollment_pacing_pct
+    label: "Enrollment pacing %"
+    category: goal
+    primary_table: performance_by_day
+    join_tables:
+      - table: goals_by_day
+        join_on: "UPPER(goals_by_day.REPKEYDAY) = performance_by_day.REPKEY"
+        join_type: LEFT
+    expression: "SUM(performance_by_day.NETENROLLMENTS) / NULLIF(SUM(goals_by_day.TARGETENROLLMENTSDAY), 0)"
+    format: percent
+    description: >
+      How far ahead or behind a rep is vs their pro-rated daily enrollment goal.
+      Values above 1.0 (100%) mean ahead of pace. Join performance_by_day to
+      goals_by_day on UPPER(REPKEYDAY) = REPKEY. Filter both tables to same month.
+
+  - name: debt_pacing_pct
+    label: "Debt pacing %"
+    category: goal
+    primary_table: performance_by_day
+    join_tables:
+      - table: goals_by_day
+        join_on: "UPPER(goals_by_day.REPKEYDAY) = performance_by_day.REPKEY"
+        join_type: LEFT
+    expression: "SUM(performance_by_day.NETDEBT) / NULLIF(SUM(goals_by_day.TARGETDEBTDAY), 0)"
+    format: percent
+    description: >
+      How far ahead or behind a rep is vs their pro-rated daily debt goal.
+      This is the primary pacing KPI. Join performance_by_day to goals_by_day
+      on UPPER(REPKEYDAY) = REPKEY. Filter both to same month.
+
+  - name: director_goal_month
+    label: "Director monthly goal"
+    category: goal
+    primary_table: director_goals_by_day
+    expression: MAX(DIRECTORGOAL)
+    format: integer
+    description: >
+      Full monthly enrollment goal for a director's team. Always use MAX —
+      value is repeated every day. Filter by GOALDATE (YYYYMM).
+
+  - name: director_cumulative_goal
+    label: "Director cumulative goal to date"
+    category: goal
+    primary_table: director_goals_by_day
+    expression: SUM(DIRECTORGOALDAY)
+    format: integer
+    description: >
+      Running director team goal up to a specific day.
+      SUM DIRECTORGOALDAY for working days up to today in the month.
+
+  # ─────────────────────────────────────────────
+  # CALENDAR / TIME CONTEXT
+  # primary table: calendar_by_day
+  # ─────────────────────────────────────────────
+
+  - name: days_elapsed_in_month
+    label: "Working days elapsed"
+    category: calendar
+    primary_table: calendar_by_day
+    expression: MAX(DAYSPAST)
+    format: integer
+    description: >
+      How many working days have passed in the month as of the latest date
+      in the filtered period. Use MAX — DAYSPAST increases each row.
+
+  - name: working_days_in_month
+    label: "Working days in month"
+    category: calendar
+    primary_table: calendar_by_day
+    expression: MAX(DAYSINMONTH)
+    format: integer
+    description: Total working days in the month. Always 22 in this dataset.
+
+  - name: month_completion_pct
+    label: "Month completion %"
+    category: calendar
+    primary_table: calendar_by_day
+    expression: "MAX(DAYSPAST) / NULLIF(MAX(DAYSINMONTH), 0)"
+    format: percent
+    description: >
+      How far through the month we are based on working days.
+      Use this to contextualise pacing — a rep at 80% of goal with
+      50% of the month elapsed is actually ahead of pace.
+
+agent_instructions: >
+  When writing SQL for any dashboard dataset:
+  1. Always look up the measure definition here before writing any aggregation.
+  2. Use the expression field exactly as written — do not rephrase or simplify.
+  3. Use primary_table as the main FROM table.
+  4. If join_tables is specified, include those JOINs using the join_on condition.
+  5. For monthly totals always filter by RANKDATEVALUE (performance_by_day),
+     TARGETDATE (goals_by_day), GOALDATE (director_goals_by_day), or
+     Date (detailes / early_cancellation).
+  6. Before using pacing joins, verify the actual grain of goals_by_day in the
+     warehouse. In this uploaded dataset the target table behaves at rep-month
+     grain for totals.
+  7. Never SUM columns marked aggregation: MAX unless warehouse inspection shows
+     the table is already stored at month grain with one row per rep-month.
+  8. The casing difference between REPKEY (uppercase) and REPKEYDAY (mixed case)
+     requires UPPER(goals_by_day.REPKEYDAY) = performance_by_day.REPKEY in joins
+     when the daily-grain keys are actually present.
