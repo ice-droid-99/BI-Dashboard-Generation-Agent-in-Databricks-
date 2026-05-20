@@ -1,0 +1,176 @@
+version: '1.0'
+catalog: workspace
+schema: reportingbus
+generated_at: '2026-05-20T15:13:19.997698'
+tables:
+- name: calendar_by_day
+  columns:
+  - name: DATE
+    type: string
+  - name: DATEVALUE
+    type: bigint
+  - name: EOM
+    type: date
+  - name: DAILYDATE
+    type: date
+  - name: DAYSPAST
+    type: bigint
+  - name: DAYSINMONTH
+    type: bigint
+  - name: DATEVALUEDAY
+    type: bigint
+- name: detailes
+  columns:
+  - name: OriginalRep
+    type: string
+  - name: ClientID
+    type: bigint
+  - name: FirstName
+    type: string
+  - name: LastName
+    type: string
+  - name: EnrollDate
+    type: date
+  - name: Date
+    type: bigint
+  - name: OriginalEnrolledDebt
+    type: bigint
+  - name: CurrentEnrolledDebt
+    type: bigint
+  - name: EOMEnrolledDebt
+    type: bigint
+  - name: ClientStatus
+    type: string
+  - name: CancelDate
+    type: date
+  - name: Program
+    type: string
+- name: director_goals_by_day
+  columns:
+  - name: DIRECTORKEY
+    type: string
+  - name: DIRECTORKEYDAY
+    type: string
+  - name: TEAM
+    type: string
+  - name: DIRECTORGOAL
+    type: bigint
+  - name: GOALDATE
+    type: bigint
+  - name: GOALDAY
+    type: bigint
+  - name: DIRECTORGOALDAY
+    type: bigint
+  - name: DAYSINMONTH
+    type: bigint
+- name: early_cancellation
+  columns:
+  - name: Date
+    type: bigint
+  - name: SaleRep
+    type: string
+  - name: EnrollDate
+    type: date
+  - name: ClientID
+    type: bigint
+  - name: ClientStatus
+    type: string
+  - name: CancelDate
+    type: date
+  - name: Cancel
+    type: bigint
+  - name: DaysToCancel
+    type: bigint
+  - name: EarlyCancellation
+    type: bigint
+  - name: CancelledDebt
+    type: bigint
+  - name: Program
+    type: string
+  - name: CANCELREASON
+    type: string
+  - name: SALESREPDAY
+    type: string
+- name: goals_by_day
+  columns:
+  - name: REPKEY
+    type: string
+  - name: REPKEYDAY
+    type: string
+  - name: REP
+    type: string
+  - name: TEAM
+    type: string
+  - name: TARGETENROLLMENTS
+    type: bigint
+  - name: TARGETDEBT
+    type: bigint
+  - name: TARGETDATE
+    type: bigint
+  - name: TARGETDAY
+    type: bigint
+  - name: TARGETENROLLMENTSDAY
+    type: double
+  - name: TARGETDEBTDAY
+    type: double
+  - name: DIRECTORKEY
+    type: string
+  - name: DIRECTORKEYDAY
+    type: string
+- name: performance_by_day
+  columns:
+  - name: REPKEY
+    type: string
+  - name: RANKDATE
+    type: string
+  - name: RANKDATEVALUE
+    type: bigint
+  - name: RANKDAYVALUE
+    type: bigint
+  - name: ORIGINALREP
+    type: string
+  - name: ENROLLMENTS
+    type: bigint
+  - name: NETENROLLMENTS
+    type: bigint
+  - name: TOTALDEBT
+    type: bigint
+  - name: NETDEBT
+    type: bigint
+  - name: EARLYCANCELLATION
+    type: bigint
+  - name: CANCELLEDDEBT
+    type: bigint
+  - name: ENROLLDATE
+    type: string
+relationships:
+- name: goals_by_day_to_director_goals_by_day
+  from_table: goals_by_day
+  from_column: DIRECTORKEYDAY
+  to_table: director_goals_by_day
+  to_column: DIRECTORKEYDAY
+  cardinality: Many to One
+- name: goals_by_day_to_performance_by_day
+  from_table: goals_by_day
+  from_column: REPKEYDAY
+  to_table: performance_by_day
+  to_column: REPKEY
+  cardinality: Many to One
+- name: goals_by_day_to_calendar_by_day
+  from_table: goals_by_day
+  from_column: TARGETDAY
+  to_table: calendar_by_day
+  to_column: DATEVALUEDAY
+  cardinality: Many to One
+- name: goals_by_day_to_early_cancellation
+  from_table: goals_by_day
+  from_column: REPKEYDAY
+  to_table: early_cancellation
+  to_column: SALESREPDAY
+  cardinality: One to Many
+- name: detailes_to_calendar_by_day
+  from_table: detailes
+  from_column: ENROLLDATE
+  to_table: calendar_by_day
+  to_column: DAILYDATE
+  cardinality: Many to One
