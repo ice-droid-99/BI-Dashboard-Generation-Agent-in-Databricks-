@@ -96,9 +96,21 @@ measures:
     label: "Avg debt per enrollment"
     category: debt
     primary_table: performance_by_day
+    expression: "SUM(TOTALDEBT) / NULLIF(SUM(ENROLLMENTS), 0)"
+    format: currency
+    description: >
+      Average gross enrolled debt per gross enrollment.
+      Use this when the requirement is gross debt divided by gross enrollments.
+
+  - name: avg_net_debt_per_net_enrollment
+    label: "Avg net debt per net enrollment"
+    category: debt
+    primary_table: performance_by_day
     expression: "SUM(NETDEBT) / NULLIF(SUM(NETENROLLMENTS), 0)"
     format: currency
-    description: Average net debt per net enrollment. Indicates deal size.
+    description: >
+      Average net debt per net enrollment.
+      Use only when the business requirement explicitly asks for a net-to-net ratio.
 
   - name: cancelled_debt_total
     label: "Cancelled debt"

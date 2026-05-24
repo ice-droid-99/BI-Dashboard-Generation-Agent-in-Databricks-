@@ -2,6 +2,11 @@
 
 Common errors and fixes for AI/BI dashboards.
 
+> **For business validation issues** (formula correctness, cross-checking expected values, prompt vs YAML conflicts), 
+> see [aibi-dashboard-guardrails](../aibi-dashboard-guardrails/SKILL.md).
+
+---
+
 ## Structural Errors (JSON Parse Failures)
 
 These errors occur when the JSON structure is wrong:

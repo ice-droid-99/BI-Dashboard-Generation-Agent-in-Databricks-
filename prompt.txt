@@ -1,0 +1,37 @@
+Build a 2-page dashboard called "BiLayerFinal" using the tables in reportingbus schema. Use the measures, descriptions, schema and relationships in yaml files , inside finalsemantic folder .
+use aibidashboard skills and gaurdrails
+
+---PAGE 1: OVERVIEW---
+FILTERS (top of page, 3 slicers):
+1. Date filter with two modes the user can toggle — one that filters by exact date, and one that filters by month and year combined (e.g. "Jan 2025"). Both should affect all visuals on the page.
+2. Team filter — list of all sales teams.
+3. Rep filter — list of all sales reps, ideally cascading so it only shows reps in the selected team.
+KPI CARDS (single row below filters, 9 cards):
+- Total gross enrollments
+- Total net enrollments
+- Average daily enrollments (total net enrollments divided by number of active days in the selected period)
+- Early cancellations count
+- Cancelled debt rate (cancelled debt as a % of gross enrolled debt)
+- Best performing team (team name with highest net enrollments — show as a text/highlight card)
+- Average days to cancel
+- Total gross enrolled debt in dollars
+- Average debt per enrollment (gross debt divided by gross enrollments)
+VISUALS (below KPI row, 2 side by side):
+Left — Bar chart: Team performance. For each team show two grouped bars — total gross enrollments and total gross enrolled debt. Use a dual axis if needed so both metrics are readable (debt in $M, enrollments as count). Label each bar with its value.
+Right — Donut chart: Cancellation breakdown by reason. Show count and % for each reason. Use red/amber tones.
+All visuals respond to the 3 slicers above.
+Color rules: green ≥100% of target, amber 80–99%, red <80%. Cancellation metrics in red/amber. Enrollment bars in neutral blue. Debt bars in teal/slate.
+
+---PAGE 2: MONTHLY GOALS & REP PERFORMANCE---
+
+No filters on this page. Data shown for the full period.
+
+VISUAL 1 — Monthly goal vs actual table:
+A matrix/table with one row per month. Columns: Month, Enrollment Target, Actual Net Enrollments, % Achievement, Debt Target, Actual Net Debt, Debt % Achievement.
+Color-code the two % achievement columns: green ≥100%, amber 80–99%, red <80%.
+Add a totals row at the bottom.
+
+VISUAL 2 — Rep performance scorecard table:
+One row per sales rep. Columns: Rep Name, Team, Gross Enrollments, Net Enrollments, Gross Debt, Avg Debt per Enrollment, Early Cancellations, Cancel Rate %, Avg Days to Cancel.
+Sort by Net Enrollments descending. Color the Cancel Rate % column: green <5%, amber 5–10%, red >10%. Bold the top rep row.
+This table gives managers a single view to compare volume, quality, and churn risk across every rep.
