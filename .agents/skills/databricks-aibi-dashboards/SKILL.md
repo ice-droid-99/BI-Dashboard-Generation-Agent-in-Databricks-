@@ -21,6 +21,7 @@ Create Databricks AI/BI dashboards (formerly Lakeview dashboards). **Follow thes
 │          - If query fails, FIX IT before proceeding                │
 │          - Verify column names match what widgets will reference   │
 │          - Verify data types are correct (dates, numbers, strings) │
+│          - If user provided expected values, cross-check results   │
 ├─────────────────────────────────────────────────────────────────────┤
 │  STEP 4: Build dashboard JSON using ONLY verified queries          │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -29,6 +30,20 @@ Create Databricks AI/BI dashboards (formerly Lakeview dashboards). **Follow thes
 ```
 
 **WARNING: If you deploy without testing queries, widgets WILL show "Invalid widget definition" errors!**
+
+### Business Validation Rules
+
+When building dashboards, also apply these business validation rules:
+
+1. **Prompt overrides YAML**: If user defines a KPI formula or display rule in their prompt, use that definition even if a semantic YAML file says something different. See [aibi-dashboard-guardrails](../aibi-dashboard-guardrails/SKILL.md).
+
+2. **Clarify ambiguous metrics**: If a measure name is generic (e.g., "revenue"), clarify whether it means gross vs net, booked vs realized, current-period vs lifetime, etc.
+
+3. **Cross-check expected values**: If user provides expected values or a sample table, validate your SQL results match those values exactly (including formatting, rounding, units) before deploying.
+
+4. **Formatting validation**: Don't assume compact currency formatting is acceptable. Check user requirements for full vs abbreviated display.
+
+5. **Display vs raw datasets**: Use raw datasets for aggregation/filtering, display-shaped datasets only when user expects presentation-ready formatted strings.
 
 ## Available MCP Tools
 
@@ -74,9 +89,15 @@ manage_dashboard(action="list")
 | What are you building? | Reference |
 |------------------------|-----------|
 | Any widget (text, counter, table, chart) | [1-widget-specifications.md](1-widget-specifications.md) |
-| Dashboard with filters (global or page-level) | [2-filters.md](2-filters.md) |
-| Need a complete working template to adapt | [3-examples.md](3-examples.md) |
-| Debugging a broken dashboard | [4-troubleshooting.md](4-troubleshooting.md) |
+| Advanced widgets (area, scatter, combo, map) | [2-advanced-widget-specifications.md](2-advanced-widget-specifications.md) |
+| Dashboard with filters (global or page-level) | [3-filters.md](3-filters.md) |
+| Need a complete working template to adapt | [4-examples.md](4-examples.md) |
+| Debugging a broken dashboard | [5-troubleshooting.md](5-troubleshooting.md) |
+| Optimizing dashboard performance | [6-performance-optimization.md](6-performance-optimization.md) |
+| SQL patterns for analytics (cohorts, funnels, RFM) | [7-data-modeling-patterns.md](7-data-modeling-patterns.md) |
+| Formatting numbers, dates, and styling | [8-advanced-formatting.md](8-advanced-formatting.md) |
+| Dashboard design and UX best practices | [9-dashboard-design-principles.md](9-dashboard-design-principles.md) |
+| Integration with Unity Catalog, DLT, MLflow, etc. | [10-integration-patterns.md](10-integration-patterns.md) |
 
 ---
 
@@ -221,6 +242,7 @@ Before deploying, verify:
 
 ## Related Skills
 
+- **[aibi-dashboard-guardrails](../aibi-dashboard-guardrails/SKILL.md)** - for business validation, formula verification, cross-checking against user expectations, and resolving prompt vs YAML conflicts
 - **[databricks-unity-catalog](../databricks-unity-catalog/SKILL.md)** - for querying the underlying data and system tables
 - **[databricks-spark-declarative-pipelines](../databricks-spark-declarative-pipelines/SKILL.md)** - for building the data pipelines that feed dashboards
 - **[databricks-jobs](../databricks-jobs/SKILL.md)** - for scheduling dashboard data refreshes

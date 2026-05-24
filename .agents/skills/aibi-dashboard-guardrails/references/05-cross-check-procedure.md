@@ -10,5 +10,7 @@ Procedure:
 4. Patch only the affected dataset or dashboard section.
 5. Revalidate before publishing.
 
+
 Do not publish after only checking that SQL runs.
 Publish only after checking that the rendered business values match the user's cross-check.
+

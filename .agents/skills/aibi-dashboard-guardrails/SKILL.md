@@ -14,6 +14,7 @@ Apply these rules before changing any dashboard.
 3. Validate every KPI formula with explicit SQL before publishing.
 4. If the user gives expected values, cross-check the dashboard against those values before publishing.
 5. Separate raw metric datasets from display-shaped reporting datasets when the user expects rounded, formatted, or decorated table values.
+6. **Spacing Mandate:** Never use width < 4 or height < 3 for counter/KPI widgets. Ensure every row in a 12-column grid is fully filled (sums to 12) to prevent visual gaps or congestion.
 
 ## Read these references as needed
 
@@ -30,6 +31,10 @@ Apply these rules before changing any dashboard.
 - If a measure name is ambiguous, clarify whether it is gross, net, filtered, cumulative, or display-only.
 - Do not assume compact currency formatting is acceptable. Check the requested presentation first.
 - Use display-shaped datasets only when the user expects presentation-ready table values rather than raw numeric fields.
+- **Layout Validation:** Before deployment, perform a "Grid Audit":
+    - Sum widths for each `y` coordinate; they must total 12.
+    - Check for overlapping `y` coordinates.
+    - Verify counter widgets have minimum dimensions (w=4, h=3) to prevent congestion.
 
 ## Output discipline
 
