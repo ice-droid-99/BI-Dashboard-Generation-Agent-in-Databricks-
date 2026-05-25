@@ -48,7 +48,7 @@ npm install -g codex-cli
 
 ### 3. Install Databricks AI Dev Kit
 
-The Databricks AI Dev Kit is from the official [Databricks Solutions repository](https://github.com/databricks/ai-dev-kit). It provides:
+The Databricks AI Dev Kit is from the official [Databricks Solutions repository](https://github.com/databricks-solutions/ai-dev-kit). It provides:
 - **MCP (Model Context Protocol) servers** for Databricks integration
 - **Pre-built skills** for Databricks development workflows
 - **Local development environment** for "vibe coding" on Databricks
