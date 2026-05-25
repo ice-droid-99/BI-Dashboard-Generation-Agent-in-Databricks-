@@ -64,7 +64,7 @@ irm install | iex
 - Integration with AI coding assistants (Claude, Gemini, etc.)
 - Local development with Databricks context
 
-**Repository:** https://github.com/databricks/ai-dev-kit
+**Repository:** https://github.com/databricks-solutions/ai-dev-kit
 
 ## Project Structure
 
