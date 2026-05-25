@@ -1,6 +1,6 @@
 # Databricks AI/BI Dashboard Generator
 
-An AI-powered workflow for generating Databricks AI/BI dashboards using custom skills and guardrails with AI Dev Kit .
+An AI-powered workflow for generating Databricks AI/BI dashboards using custom skills and guardrails with AI Dev Kit.
 
 ## Overview
 
