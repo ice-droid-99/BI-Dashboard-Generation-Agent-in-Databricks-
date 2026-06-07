@@ -1,0 +1,61 @@
+customer_id,full_name,gender,date_of_birth,customer_since,occupation,segment,city,state,country,customer_code
+1,Sunita Sharma,F,1970-12-26,2015-01-03,Salaried,Mass Market,Hyderabad,Telangana,India,CUST0001
+2,Kavya Patel,M,1978-12-04,2010-09-18,Self-Employed,Mass Market,Surat,Gujarat,India,CUST0002
+3,Meera Joshi,F,1961-03-10,2022-08-03,Student,Mass Market,Surat,Gujarat,India,CUST0003
+4,Neha Kumar,M,1986-06-07,2016-03-28,Salaried,High Net Worth,Ahmedabad,Gujarat,India,CUST0004
+5,Anjali Iyer,M,1972-06-18,2013-06-27,Business Owner,Mass Market,Pune,Maharashtra,India,CUST0005
+6,Sunita Patel,F,1964-05-03,2018-01-19,Student,High Net Worth,Kolkata,West Bengal,India,CUST0006
+7,Ravi Sharma,M,1984-01-20,2012-10-19,Retired,Premier,Ahmedabad,Gujarat,India,CUST0007
+8,Rahul Joshi,F,1997-03-15,2018-02-10,Salaried,Affluent,Hyderabad,Telangana,India,CUST0008
+9,Priya Kumar,M,1963-07-31,2015-03-23,Retired,High Net Worth,Hyderabad,Telangana,India,CUST0009
+10,Ravi Gupta,M,1967-04-18,2018-04-21,Business Owner,Mass Market,Pune,Maharashtra,India,CUST0010
+11,Rahul Mehta,F,1983-12-17,2015-06-29,Retired,Mass Market,Bangalore,Karnataka,India,CUST0011
+12,Ravi Joshi,M,1990-09-16,2017-04-10,Salaried,High Net Worth,Chennai,Tamil Nadu,India,CUST0012
+13,Meera Sharma,F,1977-12-29,2016-01-03,Student,Mass Market,Pune,Maharashtra,India,CUST0013
+14,Arun Kumar,M,1977-09-30,2020-04-16,Self-Employed,Mass Market,Ahmedabad,Gujarat,India,CUST0014
+15,Meera Joshi,M,1971-10-14,2019-08-11,Retired,High Net Worth,Jaipur,Rajasthan,India,CUST0015
+16,Deepa Kumar,F,1982-11-09,2021-01-25,Salaried,Mass Market,Bangalore,Karnataka,India,CUST0016
+17,Sunita Singh,M,1995-07-13,2019-06-21,Retired,Affluent,Bangalore,Karnataka,India,CUST0017
+18,Kiran Mehta,F,1983-09-26,2015-08-22,Salaried,Premier,Ahmedabad,Gujarat,India,CUST0018
+19,Sunita Joshi,M,1994-06-23,2017-08-18,Retired,Mass Market,Hyderabad,Telangana,India,CUST0019
+20,Anjali Gupta,M,1992-05-22,2015-11-28,Self-Employed,Premier,Mumbai,Maharashtra,India,CUST0020
+21,Rajesh Patel,F,1997-10-02,2021-05-21,Self-Employed,Affluent,Hyderabad,Telangana,India,CUST0021
+22,Deepa Singh,M,1994-12-05,2021-11-23,Student,High Net Worth,Jaipur,Rajasthan,India,CUST0022
+23,Arun Gupta,F,1965-01-06,2018-02-21,Business Owner,High Net Worth,Mumbai,Maharashtra,India,CUST0023
+24,Meera Sharma,M,1999-05-21,2022-09-22,Salaried,High Net Worth,Chennai,Tamil Nadu,India,CUST0024
+25,Lakshmi Patel,M,1994-05-09,2012-10-27,Retired,Mass Market,Jaipur,Rajasthan,India,CUST0025
+26,Kavya Singh,F,1983-09-02,2019-06-29,Student,Premier,Hyderabad,Telangana,India,CUST0026
+27,Sanjay Reddy,M,1990-02-16,2018-05-18,Student,Mass Market,Kolkata,West Bengal,India,CUST0027
+28,Suresh Patel,F,1970-01-29,2011-06-09,Student,Mass Market,Chennai,Tamil Nadu,India,CUST0028
+29,Kavya Kumar,M,1969-11-17,2010-02-28,Salaried,Mass Market,Surat,Gujarat,India,CUST0029
+30,Meera Patel,M,1998-07-24,2017-05-30,Self-Employed,Mass Market,Mumbai,Maharashtra,India,CUST0030
+31,Ravi Gupta,F,1984-03-09,2012-12-19,Student,Affluent,Chennai,Tamil Nadu,India,CUST0031
+32,Mohan Gupta,M,1995-03-13,2020-08-10,Self-Employed,High Net Worth,Chennai,Tamil Nadu,India,CUST0032
+33,Sunita Patel,F,1975-11-22,2019-07-02,Salaried,Mass Market,Kolkata,West Bengal,India,CUST0033
+34,Sunita Sharma,M,1992-08-31,2017-08-11,Salaried,High Net Worth,Kolkata,West Bengal,India,CUST0034
+35,Meera Kumar,M,1984-01-21,2020-01-24,Self-Employed,Mass Market,Chennai,Tamil Nadu,India,CUST0035
+36,Ravi Gupta,F,1999-03-24,2011-09-10,Student,Mass Market,Chennai,Tamil Nadu,India,CUST0036
+37,Sunita Sharma,M,1997-07-02,2010-05-01,Self-Employed,Premier,Jaipur,Rajasthan,India,CUST0037
+38,Anjali Iyer,F,1981-08-04,2014-10-18,Salaried,High Net Worth,Ahmedabad,Gujarat,India,CUST0038
+39,Anjali Iyer,M,1977-07-06,2015-12-13,Retired,High Net Worth,Mumbai,Maharashtra,India,CUST0039
+40,Pooja Iyer,M,1989-09-09,2020-11-30,Business Owner,Mass Market,Jaipur,Rajasthan,India,CUST0040
+41,Sanjay Sharma,F,1993-01-01,2022-02-28,Business Owner,Mass Market,Surat,Gujarat,India,CUST0041
+42,Priya Sharma,M,1981-05-21,2021-04-12,Student,High Net Worth,Surat,Gujarat,India,CUST0042
+43,Anjali Sharma,F,1963-08-05,2014-03-03,Salaried,Mass Market,Jaipur,Rajasthan,India,CUST0043
+44,Meera Iyer,M,1999-12-08,2022-10-11,Student,Mass Market,Delhi,Delhi,India,CUST0044
+45,Priya Mehta,M,1978-10-21,2022-09-05,Business Owner,Affluent,Delhi,Delhi,India,CUST0045
+46,Sanjay Nair,F,1971-11-30,2018-11-17,Business Owner,Mass Market,Chennai,Tamil Nadu,India,CUST0046
+47,Suresh Nair,M,1960-06-01,2020-04-12,Student,Affluent,Delhi,Delhi,India,CUST0047
+48,Sunita Patel,F,1969-07-24,2021-05-07,Business Owner,Mass Market,Jaipur,Rajasthan,India,CUST0048
+49,Rahul Kumar,M,1972-10-13,2013-07-16,Student,Mass Market,Pune,Maharashtra,India,CUST0049
+50,Pooja Mehta,M,1960-05-08,2022-06-10,Salaried,Mass Market,Jaipur,Rajasthan,India,CUST0050
+51,Vikram Reddy,F,1999-11-29,2012-05-26,Self-Employed,Affluent,Delhi,Delhi,India,CUST0051
+52,Ravi Reddy,M,1969-06-12,2017-09-09,Business Owner,Mass Market,Surat,Gujarat,India,CUST0052
+53,Rajesh Gupta,F,2000-08-11,2011-02-21,Retired,Mass Market,Hyderabad,Telangana,India,CUST0053
+54,Ravi Sharma,M,1974-12-17,2012-12-07,Business Owner,Affluent,Mumbai,Maharashtra,India,CUST0054
+55,Anjali Gupta,M,1991-08-27,2019-08-05,Salaried,Affluent,Jaipur,Rajasthan,India,CUST0055
+56,Rahul Singh,F,1961-08-13,2018-04-13,Self-Employed,Affluent,Jaipur,Rajasthan,India,CUST0056
+57,Neha Singh,M,1973-10-29,2018-03-07,Salaried,High Net Worth,Mumbai,Maharashtra,India,CUST0057
+58,Deepa Kumar,F,1989-12-01,2012-04-22,Student,Mass Market,Chennai,Tamil Nadu,India,CUST0058
+59,Neha Mehta,M,1970-08-14,2013-08-24,Self-Employed,Premier,Bangalore,Karnataka,India,CUST0059
+60,Neha Sharma,M,1993-01-14,2017-06-14,Retired,Affluent,Bangalore,Karnataka,India,CUST0060

@@ -67,6 +67,13 @@ irm install | iex
 **Repository:** https://github.com/databricks/ai-dev-kit
 
 ## Project Structure
+Banking synthetic folder : sample csv data for banking and metric views
+
+semantic_layer : sample yaml files measures and description for debt settlement dataset
+
+tablerel : joins of debt settlement dataset
+
+csvtemp : sample debt settlement dataset 
 
 ```
 claudedb/
@@ -89,8 +96,9 @@ claudedb/
 ├── generate_schema_yaml.py                # Schema generation script
 ├── updated_dashboard.json                 # Final dashboard configuration
 └── README.md
-```
 
+ 
+ ```
 ## Workflow
 
 ### Step 1: Add AI/BI Dashboard Skills

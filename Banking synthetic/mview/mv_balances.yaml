@@ -1,0 +1,158 @@
+version: 1.1
+
+source: banking.gold.fact_account_balance_snapshot
+
+joins:
+  - name: account
+    source: banking.gold.dim_account
+    "on": source.account_id = account.account_id
+  - name: customer
+    source: banking.gold.dim_customer
+    "on": source.customer_id = customer.customer_id
+  - name: cal
+    source: banking.gold.dim_date
+    "on": source.date_key = cal.date_key
+
+comment: "Monthly account balance snapshot metric view. Used for AUM tracking, balance\
+  \ trends, liability analysis, and low-balance alerts."
+
+dimensions:
+  - name: month_end_date
+    expr: source.month_end_date
+    display_name: Month end date
+    synonyms:
+      - snapshot date
+      - month end
+      - period end
+  - name: snapshot_month
+    expr: source.month
+    display_name: Month
+    synonyms:
+      - reporting month
+  - name: snapshot_year
+    expr: source.year
+    display_name: Year
+    synonyms:
+      - reporting year
+  - name: account_type
+    expr: account.account_type
+    display_name: Account type
+    synonyms:
+      - savings current FD RD
+      - product type
+  - name: account_status
+    expr: account.account_status
+    display_name: Account status
+    synonyms:
+      - active dormant closed
+  - name: customer_segment
+    expr: customer.segment
+    display_name: Customer segment
+    synonyms:
+      - segment
+      - HNW affluent mass
+  - name: customer_city
+    expr: customer.city
+    display_name: City
+    synonyms:
+      - location
+      - metro
+  - name: customer_state
+    expr: customer.state
+    display_name: State
+  - name: branch_id
+    expr: account.branch_id
+    display_name: Branch ID
+  - name: balance_tier
+    expr: |-
+      CASE
+        WHEN source.closing_balance < 0          THEN 'Negative'
+        WHEN source.closing_balance < 1000       THEN 'Below MAB'
+        WHEN source.closing_balance < 25000      THEN 'Low (1K-25K)'
+        WHEN source.closing_balance < 100000     THEN 'Medium (25K-1L)'
+        WHEN source.closing_balance < 1000000    THEN 'High (1L-10L)'
+        ELSE                                          'Premium (>10L)'
+      END
+    display_name: Balance tier
+    synonyms:
+      - AQB band
+      - balance bucket
+      - minimum average balance tier
+  - name: is_low_balance
+    expr: |-
+      CASE source.is_low_balance_flag
+        WHEN 1 THEN 'Low balance'
+        ELSE 'Normal'
+      END
+    display_name: Low balance flag
+    synonyms:
+      - below MAB
+      - low balance alert
+
+measures:
+  - name: total_closing_balance
+    expr: SUM(source.closing_balance)
+    comment: Total deposits / liabilities at month end. Core AUM metric.
+    display_name: Total closing balance (INR)
+    synonyms:
+      - AUM
+      - total deposits
+      - CASA balance
+      - liability book
+      - closing balance
+  - name: total_average_balance
+    expr: SUM(source.average_balance)
+    display_name: Total average balance (INR)
+    synonyms:
+      - AQB
+      - average quarterly balance
+      - TAB
+  - name: total_credits
+    expr: SUM(source.total_credits)
+    display_name: Total credits in period (INR)
+    synonyms:
+      - inflows
+      - credit inflows
+      - total deposits received
+  - name: total_debits
+    expr: SUM(source.total_debits)
+    display_name: Total debits in period (INR)
+    synonyms:
+      - outflows
+      - total withdrawals
+  - name: net_flow
+    expr: SUM(source.total_credits) - SUM(source.total_debits)
+    display_name: Net flow (INR)
+    synonyms:
+      - net deposit growth
+      - net inflow outflow
+  - name: account_count
+    expr: COUNT(DISTINCT source.account_id)
+    display_name: Account count
+    synonyms:
+      - number of accounts
+      - accounts
+  - name: low_balance_account_count
+    expr: COUNT(DISTINCT source.account_id) FILTER (WHERE source.is_low_balance_flag
+      = 1)
+    display_name: Low balance accounts
+    synonyms:
+      - below MAB accounts
+      - low balance count
+  - name: low_balance_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.account_id) FILTER (WHERE source.is_low_balance_flag = 1)
+        / NULLIF(COUNT(DISTINCT source.account_id), 0) * 100
+      , 2)
+    display_name: Low balance rate (%)
+    synonyms:
+      - below MAB rate
+      - low balance %
+  - name: avg_balance_per_account
+    expr: "ROUND(SUM(source.closing_balance) / NULLIF(COUNT(DISTINCT source.account_id),\
+      \ 0), 2)"
+    display_name: Avg balance per account (INR)
+    synonyms:
+      - average account balance
+      - per account AUM

@@ -1,0 +1,318 @@
+version: 1.1
+
+source: |-
+  SELECT
+    ft.*,
+    da.account_number,
+    da.account_type,
+    da.account_status,
+    da.current_balance,
+    da.branch_id
+  FROM banking.gold.fact_transactions ft LEFT JOIN banking.gold.dim_account da
+    ON ft.account_id = da.account_id
+
+joins:
+  - name: customer
+    source: banking.gold.dim_customer
+    "on": source.customer_id = customer.customer_id
+  - name: txn_type
+    source: banking.gold.dim_transaction_type
+    "on": source.transaction_type_id = txn_type.transaction_type_id
+  - name: channel
+    source: banking.gold.dim_channel
+    "on": source.channel_id = channel.channel_id
+  - name: branch
+    source: banking.gold.dim_branch
+    "on": source.branch_id = branch.branch_id
+  - name: cal
+    source: banking.gold.dim_date
+    "on": source.date_key = cal.date_key
+
+comment: "Core transaction metric view for retail banking executive dashboards. Covers\
+  \ transaction volumes, revenue, channel mix, and status analysis."
+
+dimensions:
+  - name: transaction_date
+    expr: source.transaction_date
+    comment: Raw transaction date
+    display_name: Transaction date
+  - name: transaction_month
+    expr: "DATE_TRUNC('MONTH', source.transaction_date)"
+    comment: Month bucket for trend analysis
+    display_name: Transaction month
+    synonyms:
+      - month
+      - txn month
+  - name: transaction_quarter
+    expr: "DATE_TRUNC('QUARTER', source.transaction_date)"
+    display_name: Transaction quarter
+    synonyms:
+      - quarter
+      - QTD period
+  - name: transaction_year
+    expr: YEAR(source.transaction_date)
+    display_name: Transaction year
+    synonyms:
+      - year
+      - annual period
+  - name: day_name
+    expr: cal.day_name
+    display_name: Day of week
+    synonyms:
+      - weekday
+      - day
+  - name: is_weekend
+    expr: cal.is_weekend
+    comment: "1 = weekend, 0 = weekday"
+    display_name: Is weekend
+  - name: transaction_type_name
+    expr: txn_type.transaction_type_name
+    display_name: Transaction type
+    synonyms:
+      - txn type
+      - payment type
+      - transfer type
+  - name: transaction_category
+    expr: txn_type.category
+    display_name: Transaction category
+    synonyms:
+      - category
+      - txn category
+  - name: debit_credit_indicator
+    expr: source.debit_credit_indicator
+    display_name: Debit / credit
+    synonyms:
+      - Dr Cr
+      - debit credit flag
+  - name: transaction_status
+    expr: source.transaction_status
+    display_name: Transaction status
+    synonyms:
+      - status
+      - txn status
+      - payment status
+  - name: processing_mode
+    expr: txn_type.processing_mode
+    comment: "Real-time, Batch, or Auto"
+    display_name: Processing mode
+    synonyms:
+      - settlement mode
+  - name: amount_bucket
+    expr: |-
+      CASE
+        WHEN source.amount < 1000        THEN 'Micro (<1K)'
+        WHEN source.amount < 10000       THEN 'Small (1K-10K)'
+        WHEN source.amount < 100000      THEN 'Medium (10K-1L)'
+        WHEN source.amount < 1000000     THEN 'Large (1L-10L)'
+        ELSE                                  'Bulk (>10L)'
+      END
+    comment: INR transaction size tier
+    display_name: Amount bucket
+    synonyms:
+      - transaction size
+      - ticket size
+      - amount range
+  - name: channel_name
+    expr: channel.channel_name
+    display_name: Channel
+    synonyms:
+      - payment channel
+      - banking channel
+  - name: channel_type
+    expr: channel.channel_type
+    comment: Digital or Assisted or Self-Service
+    display_name: Channel type
+    synonyms:
+      - digital or physical
+      - channel category
+  - name: is_digital_channel
+    expr: |-
+      CASE
+        WHEN channel.channel_type = 'Digital' THEN 'Digital'
+        ELSE 'Non-Digital'
+      END
+    display_name: Digital vs non-digital
+    synonyms:
+      - digital flag
+      - digitisation
+  - name: account_type
+    expr: source.account_type
+    display_name: Account type
+    synonyms:
+      - savings current salary
+      - acct type
+  - name: account_status
+    expr: source.account_status
+    display_name: Account status
+    synonyms:
+      - active dormant closed
+  - name: account_number
+    expr: source.account_number
+    display_name: Account number
+  - name: customer_segment
+    expr: customer.segment
+    display_name: Customer segment
+    synonyms:
+      - segment
+      - customer tier
+      - HNW affluent mass
+  - name: customer_city
+    expr: customer.city
+    display_name: City
+    synonyms:
+      - location
+      - metro
+  - name: customer_state
+    expr: customer.state
+    display_name: State
+    synonyms:
+      - region
+      - geography
+  - name: customer_occupation
+    expr: customer.occupation
+    display_name: Occupation
+    synonyms:
+      - employment type
+      - salaried self-employed
+  - name: customer_gender
+    expr: customer.gender
+    display_name: Gender
+  - name: branch_name
+    expr: branch.branch_name
+    display_name: Branch
+    synonyms:
+      - branch name
+      - banking location
+  - name: branch_type
+    expr: branch.branch_type
+    comment: Urban or Semi-Urban
+    display_name: Branch type
+
+measures:
+  - name: transaction_count
+    expr: COUNT(DISTINCT source.transaction_id)
+    comment: Total number of transactions
+    display_name: Transaction count
+    synonyms:
+      - txn count
+      - number of transactions
+      - volume
+  - name: successful_transaction_count
+    expr: COUNT(DISTINCT source.transaction_id) FILTER (WHERE source.transaction_status
+      = 'Completed')
+    display_name: Successful transactions
+    synonyms:
+      - completed txns
+      - successful payments
+  - name: failed_transaction_count
+    expr: COUNT(DISTINCT source.transaction_id) FILTER (WHERE source.transaction_status
+      = 'Failed')
+    display_name: Failed transactions
+    synonyms:
+      - failed txns
+      - failed payments
+      - declines
+  - name: unique_active_customers
+    expr: COUNT(DISTINCT source.customer_id)
+    comment: Distinct customers with at least one transaction
+    display_name: Active customers
+    synonyms:
+      - active customers
+      - transacting customers
+      - DAU MAU
+  - name: unique_accounts_transacted
+    expr: COUNT(DISTINCT source.account_id)
+    display_name: Accounts transacted
+    synonyms:
+      - active accounts
+  - name: total_transaction_value
+    expr: SUM(source.amount)
+    comment: Gross amount across all transactions
+    display_name: Total transaction value (INR)
+    synonyms:
+      - total value
+      - transaction volume INR
+      - GMV
+      - total amount
+  - name: total_debit_value
+    expr: SUM(source.amount) FILTER (WHERE source.debit_credit_indicator = 'Debit')
+    display_name: Total debit value (INR)
+    synonyms:
+      - outflows
+      - total debits
+  - name: total_credit_value
+    expr: SUM(source.amount) FILTER (WHERE source.debit_credit_indicator = 'Credit')
+    display_name: Total credit value (INR)
+    synonyms:
+      - inflows
+      - total credits
+      - salary credits
+  - name: average_transaction_value
+    expr: "ROUND(SUM(source.amount) / NULLIF(COUNT(DISTINCT source.transaction_id),\
+      \ 0), 2)"
+    display_name: Avg transaction value (INR)
+    synonyms:
+      - ATV
+      - average ticket size
+      - avg txn amount
+  - name: total_fees_collected
+    expr: SUM(source.fee_charged)
+    comment: "Fee revenue from NEFT, RTGS, IMPS transactions"
+    display_name: Total fees collected (INR)
+    synonyms:
+      - fee income
+      - transaction fee revenue
+      - non-interest income
+  - name: transaction_success_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.transaction_id) FILTER (WHERE source.transaction_status = 'Completed')
+        / NULLIF(COUNT(DISTINCT source.transaction_id), 0) * 100
+      , 2)
+    display_name: Transaction success rate (%)
+    synonyms:
+      - success rate
+      - completion rate
+      - payment success %
+  - name: transaction_failure_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.transaction_id) FILTER (WHERE source.transaction_status = 'Failed')
+        / NULLIF(COUNT(DISTINCT source.transaction_id), 0) * 100
+      , 2)
+    display_name: Transaction failure rate (%)
+    synonyms:
+      - failure rate
+      - decline rate
+      - failed payment %
+  - name: digital_transaction_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.transaction_id) FILTER (WHERE channel.channel_type = 'Digital')
+        / NULLIF(COUNT(DISTINCT source.transaction_id), 0) * 100
+      , 2)
+    display_name: Digital transaction rate (%)
+    synonyms:
+      - digital adoption
+      - digital mix
+      - online txn %
+  - name: avg_transactions_per_customer
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.transaction_id)
+        / NULLIF(COUNT(DISTINCT source.customer_id), 0)
+      , 2)
+    display_name: Avg transactions per customer
+    synonyms:
+      - txn frequency
+      - customer activity
+  - name: fee_to_value_ratio
+    expr: |-
+      ROUND(
+        SUM(source.fee_charged)
+        / NULLIF(SUM(source.amount), 0) * 100
+      , 4)
+    display_name: Fee to value ratio (%)
+    synonyms:
+      - fee yield
+      - fee rate

@@ -1,0 +1,11 @@
+transaction_type_id,transaction_type_name,category,debit_credit,processing_mode,typical_fee
+1,NEFT,Fund Transfer,Debit,Batch,Low
+2,RTGS,Fund Transfer,Debit,Real-time,High
+3,IMPS,Fund Transfer,Debit,Real-time,Medium
+4,UPI,Fund Transfer,Both,Real-time,Low
+5,ATM Withdrawal,Cash,Debit,Real-time,Low
+6,POS,Merchant Payment,Debit,Real-time,Low
+7,Online Purchase,Merchant Payment,Debit,Real-time,Low
+8,Salary Credit,Credit,Credit,Batch,None
+9,Interest Credit,Credit,Credit,Batch,None
+10,EMI Debit,Loan Repayment,Debit,Auto,Low

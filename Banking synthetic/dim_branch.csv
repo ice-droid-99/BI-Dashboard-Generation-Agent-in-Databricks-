@@ -1,0 +1,11 @@
+branch_id,branch_name,city,state,branch_type
+BR001,Mumbai Main,Mumbai,Maharashtra,Urban
+BR002,Delhi Connaught,Delhi,Delhi,Urban
+BR003,Bangalore MG Road,Bangalore,Karnataka,Urban
+BR004,Chennai Anna Nagar,Chennai,Tamil Nadu,Urban
+BR005,Hyderabad Banjara,Hyderabad,Telangana,Urban
+BR006,Pune FC Road,Pune,Maharashtra,Urban
+BR007,Kolkata Park Street,Kolkata,West Bengal,Urban
+BR008,Ahmedabad CG Road,Ahmedabad,Gujarat,Semi-Urban
+BR009,Jaipur MI Road,Jaipur,Rajasthan,Semi-Urban
+BR010,Surat Ring Road,Surat,Gujarat,Semi-Urban
