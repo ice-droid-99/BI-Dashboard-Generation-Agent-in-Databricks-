@@ -1,0 +1,1442 @@
+{
+  "datasets": [
+    {
+      "name": "ds_transactions_overview",
+      "displayName": "Transactions overview",
+      "queryLines": [
+        "SELECT transaction_date, customer_segment, channel_type, channel_name, MEASURE(`total_transaction_value`) AS total_transaction_value, MEASURE(`transaction_count`) AS transaction_count, MEASURE(`successful_transaction_count`) AS successful_transaction_count, CASE WHEN channel_type = 'Digital' THEN MEASURE(`transaction_count`) ELSE 0 END AS digital_transaction_count, MEASURE(`total_transaction_value`) / 100000.0 AS value_lakhs FROM banking.gold.mv_transactions GROUP BY ALL ORDER BY transaction_date, customer_segment, channel_type, channel_name"
+      ]
+    },
+    {
+      "name": "ds_loans_overview",
+      "displayName": "Loans overview",
+      "queryLines": [
+        "SELECT disbursement_date AS transaction_date, customer_segment, loan_status, disbursed_branch AS branch_name, MEASURE(`loan_count`) AS loan_count, MEASURE(`npa_loan_count`) AS npa_loan_count, MEASURE(`total_disbursement`) AS total_disbursement, MEASURE(`total_outstanding_principal`) AS total_outstanding_principal, MEASURE(`npa_outstanding`) AS npa_outstanding FROM banking.gold.mv_loans GROUP BY ALL ORDER BY transaction_date, customer_segment, loan_status, branch_name"
+      ]
+    },
+    {
+      "name": "ds_gross_npa_ratio_kpi",
+      "displayName": "Gross NPA ratio KPI",
+      "queryLines": [
+        "SELECT ROUND(SUM(npa_outstanding) / NULLIF(SUM(total_outstanding_principal), 0), 4) AS gross_npa_ratio FROM ( SELECT MEASURE(`total_outstanding_principal`) AS total_outstanding_principal, MEASURE(`npa_outstanding`) AS npa_outstanding, disbursement_date AS transaction_date, customer_segment FROM banking.gold.mv_loans GROUP BY ALL ) loan_kpi_base"
+      ]
+    },
+    {
+      "name": "ds_balances_overview",
+      "displayName": "Balances overview",
+      "queryLines": [
+        "WITH monthly_aum AS ( SELECT month_end_date AS transaction_date, month_end_date, customer_segment, MEASURE(`total_closing_balance`) AS total_closing_balance FROM banking.gold.mv_balances GROUP BY ALL ), latest_month AS ( SELECT MAX(month_end_date) AS latest_month_end_date FROM monthly_aum ) SELECT m.transaction_date, m.month_end_date, m.customer_segment, m.total_closing_balance, CASE WHEN m.month_end_date = l.latest_month_end_date THEN m.total_closing_balance ELSE 0 END AS latest_month_closing_balance FROM monthly_aum m CROSS JOIN latest_month l ORDER BY m.month_end_date, m.customer_segment"
+      ]
+    },
+    {
+      "name": "ds_holdings_kpi_raw",
+      "displayName": "Holdings KPI raw",
+      "queryLines": [
+        "SELECT ph.acquisition_date AS transaction_date, c.segment AS customer_segment, ph.holding_id, ph.customer_id FROM banking.gold.fact_product_holdings ph JOIN banking.gold.dim_customer c ON ph.customer_id = c.customer_id"
+      ]
+    },
+    {
+      "name": "ds_txn_value_by_segment",
+      "displayName": "Transaction value by segment",
+      "queryLines": [
+        "SELECT customer_segment, MEASURE(`total_transaction_value`) AS total_transaction_value FROM banking.gold.mv_transactions GROUP BY ALL ORDER BY total_transaction_value DESC"
+      ]
+    },
+    {
+      "name": "ds_holdings_by_product_type",
+      "displayName": "Holdings by product type",
+      "queryLines": [
+        "SELECT product_type, MEASURE(`total_holding_value`) AS total_holding_value, MEASURE(`total_holding_value`) / 100000.0 AS holding_value_lakhs FROM banking.gold.mv_product_holdings GROUP BY ALL ORDER BY total_holding_value DESC"
+      ]
+    },
+    {
+      "name": "ds_top_customers",
+      "displayName": "Top customers",
+      "queryLines": [
+        "WITH customer_txn AS ( SELECT c.customer_id, c.full_name, c.segment, COUNT(DISTINCT ft.transaction_id) AS transaction_count, SUM(ft.amount) AS total_transaction_value, ROUND(SUM(ft.amount) / NULLIF(COUNT(DISTINCT ft.transaction_id), 0), 2) AS average_transaction_value FROM banking.gold.fact_transactions ft JOIN banking.gold.dim_customer c ON ft.customer_id = c.customer_id GROUP BY ALL ), grand_total AS ( SELECT SUM(total_transaction_value) AS grand_total_value FROM customer_txn ) SELECT customer_txn.full_name, customer_txn.segment, customer_txn.transaction_count, customer_txn.total_transaction_value, customer_txn.average_transaction_value, customer_txn.total_transaction_value / NULLIF(grand_total.grand_total_value, 0) AS share_of_total FROM customer_txn CROSS JOIN grand_total ORDER BY customer_txn.total_transaction_value DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "ds_branch_loan_portfolio",
+      "displayName": "Branch loan portfolio",
+      "queryLines": [
+        "SELECT disbursed_branch AS branch_name, MEASURE(`loan_count`) AS loan_count, MEASURE(`total_disbursement`) AS total_disbursement, MEASURE(`total_outstanding_principal`) AS total_outstanding_principal, MEASURE(`npa_loan_count`) AS npa_loan_count FROM banking.gold.mv_loans GROUP BY ALL ORDER BY total_disbursement DESC LIMIT 10"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "overview_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Banking"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_transaction_date",
+            "queries": [
+              {
+                "name": "filter_txn_date_transactions",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "transaction_date",
+                      "expression": "`transaction_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_txn_date_loans",
+                "query": {
+                  "datasetName": "ds_loans_overview",
+                  "fields": [
+                    {
+                      "name": "transaction_date",
+                      "expression": "`transaction_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_txn_date_balances",
+                "query": {
+                  "datasetName": "ds_balances_overview",
+                  "fields": [
+                    {
+                      "name": "transaction_date",
+                      "expression": "`transaction_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_txn_date_holdings",
+                "query": {
+                  "datasetName": "ds_holdings_kpi_raw",
+                  "fields": [
+                    {
+                      "name": "transaction_date",
+                      "expression": "`transaction_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "transaction_date",
+                    "queryName": "filter_txn_date_transactions"
+                  },
+                  {
+                    "fieldName": "transaction_date",
+                    "queryName": "filter_txn_date_loans"
+                  },
+                  {
+                    "fieldName": "transaction_date",
+                    "queryName": "filter_txn_date_balances"
+                  },
+                  {
+                    "fieldName": "transaction_date",
+                    "queryName": "filter_txn_date_holdings"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Transaction date"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_customer_segment",
+            "queries": [
+              {
+                "name": "filter_segment_transactions",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "customer_segment",
+                      "expression": "`customer_segment`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_segment_loans",
+                "query": {
+                  "datasetName": "ds_loans_overview",
+                  "fields": [
+                    {
+                      "name": "customer_segment",
+                      "expression": "`customer_segment`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_segment_balances",
+                "query": {
+                  "datasetName": "ds_balances_overview",
+                  "fields": [
+                    {
+                      "name": "customer_segment",
+                      "expression": "`customer_segment`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_segment_holdings",
+                "query": {
+                  "datasetName": "ds_holdings_kpi_raw",
+                  "fields": [
+                    {
+                      "name": "customer_segment",
+                      "expression": "`customer_segment`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "customer_segment",
+                    "displayName": "Customer segment",
+                    "queryName": "filter_segment_transactions"
+                  },
+                  {
+                    "fieldName": "customer_segment",
+                    "displayName": "Customer segment",
+                    "queryName": "filter_segment_loans"
+                  },
+                  {
+                    "fieldName": "customer_segment",
+                    "displayName": "Customer segment",
+                    "queryName": "filter_segment_balances"
+                  },
+                  {
+                    "fieldName": "customer_segment",
+                    "displayName": "Customer segment",
+                    "queryName": "filter_segment_holdings"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Customer segment"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_channel_type",
+            "queries": [
+              {
+                "name": "filter_channel_transactions",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "channel_type",
+                      "expression": "`channel_type`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "channel_type",
+                    "displayName": "Channel type",
+                    "queryName": "filter_channel_transactions"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Channel type"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_total_txn_value",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "sum(total_transaction_value)",
+                      "expression": "SUM(`total_transaction_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_transaction_value)",
+                  "displayName": "Total txn value",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total txn value"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_success_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "transaction_success_rate",
+                      "expression": "SUM(`successful_transaction_count`) / NULLIF(SUM(`transaction_count`), 0)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "transaction_success_rate",
+                  "displayName": "Transaction success rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Transaction success rate"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_digital_txn_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "digital_transaction_rate",
+                      "expression": "SUM(`digital_transaction_count`) / NULLIF(SUM(`transaction_count`), 0)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "digital_transaction_rate",
+                  "displayName": "Digital txn rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Digital txn rate"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_avg_ticket_size",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "avg_ticket_size",
+                      "expression": "SUM(`total_transaction_value`) / NULLIF(SUM(`transaction_count`), 0)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_ticket_size",
+                  "displayName": "Avg ticket size",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg ticket size"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_avg_products_per_customer",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_holdings_kpi_raw",
+                  "fields": [
+                    {
+                      "name": "avg_products_per_customer",
+                      "expression": "COUNT(DISTINCT `holding_id`) / NULLIF(COUNT(DISTINCT `customer_id`), 0)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_products_per_customer",
+                  "displayName": "Avg products per customer",
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg products per customer"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_gross_npa_ratio",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_gross_npa_ratio_kpi",
+                  "fields": [
+                    {
+                      "name": "gross_npa_ratio",
+                      "expression": "`gross_npa_ratio`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "gross_npa_ratio",
+                  "displayName": "Gross NPA ratio",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Gross NPA ratio"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_total_aum_latest_month",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_balances_overview",
+                  "fields": [
+                    {
+                      "name": "sum(latest_month_closing_balance)",
+                      "expression": "SUM(`latest_month_closing_balance`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(latest_month_closing_balance)",
+                  "displayName": "Total AUM latest month",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total AUM latest month"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_loan_book_outstanding",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_loans_overview",
+                  "fields": [
+                    {
+                      "name": "sum(total_outstanding_principal)",
+                      "expression": "SUM(`total_outstanding_principal`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_outstanding_principal)",
+                  "displayName": "Loan book outstanding",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "bold": true
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Loan book outstanding"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_transaction_value_by_channel",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_transactions_overview",
+                  "fields": [
+                    {
+                      "name": "channel_name",
+                      "expression": "`channel_name`"
+                    },
+                    {
+                      "name": "sum(value_lakhs)",
+                      "expression": "SUM(`value_lakhs`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(value_lakhs)",
+                  "displayName": "Value (Lakhs)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Value (Lakhs)"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "channel_name",
+                  "displayName": "Channel",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Transaction value by channel"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_loan_portfolio_by_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_loans_overview",
+                  "fields": [
+                    {
+                      "name": "loan_status",
+                      "expression": "`loan_status`"
+                    },
+                    {
+                      "name": "sum(total_outstanding_principal)",
+                      "expression": "SUM(`total_outstanding_principal`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(total_outstanding_principal)",
+                  "displayName": "Outstanding principal",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "loan_status",
+                  "displayName": "Loan status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Loan portfolio by status"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_aum_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_balances_overview",
+                  "fields": [
+                    {
+                      "name": "month_end_date",
+                      "expression": "`month_end_date`"
+                    },
+                    {
+                      "name": "sum(total_closing_balance)",
+                      "expression": "SUM(`total_closing_balance`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month_end_date",
+                  "displayName": "Month end date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "axis": {
+                    "title": "Month"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_closing_balance)",
+                  "displayName": "Total closing balance",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Total closing balance"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "AUM trend — monthly closing balance"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "customer_branch_deep_dive",
+      "displayName": "Customer & Branch Deep-Dive",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "deep_dive_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Customer & Branch Deep-Dive"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_txn_value_by_customer_segment",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_txn_value_by_segment",
+                  "fields": [
+                    {
+                      "name": "customer_segment",
+                      "expression": "`customer_segment`"
+                    },
+                    {
+                      "name": "total_transaction_value",
+                      "expression": "`total_transaction_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "total_transaction_value",
+                  "displayName": "Total transaction value",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 0
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "customer_segment",
+                  "displayName": "Customer segment",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Txn value by customer segment"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_holdings_value_by_product_type",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_holdings_by_product_type",
+                  "fields": [
+                    {
+                      "name": "product_type",
+                      "expression": "`product_type`"
+                    },
+                    {
+                      "name": "holding_value_lakhs",
+                      "expression": "`holding_value_lakhs`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "holding_value_lakhs",
+                  "displayName": "Value (Lakhs)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Value (Lakhs)"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "fixed",
+                      "places": 2
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "product_type",
+                  "displayName": "Product type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Holdings value by product type"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table_top_customers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_top_customers",
+                  "fields": [
+                    {
+                      "name": "full_name",
+                      "expression": "`full_name`"
+                    },
+                    {
+                      "name": "segment",
+                      "expression": "`segment`"
+                    },
+                    {
+                      "name": "transaction_count",
+                      "expression": "`transaction_count`"
+                    },
+                    {
+                      "name": "total_transaction_value",
+                      "expression": "`total_transaction_value`"
+                    },
+                    {
+                      "name": "average_transaction_value",
+                      "expression": "`average_transaction_value`"
+                    },
+                    {
+                      "name": "share_of_total",
+                      "expression": "`share_of_total`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "full_name",
+                    "displayName": "Customer"
+                  },
+                  {
+                    "fieldName": "segment",
+                    "displayName": "Segment"
+                  },
+                  {
+                    "fieldName": "transaction_count",
+                    "displayName": "Txns",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_transaction_value",
+                    "displayName": "Total value",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "average_transaction_value",
+                    "displayName": "Avg ticket",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "share_of_total",
+                    "displayName": "Share of total",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 customers"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table_branch_loan_portfolio",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_branch_loan_portfolio",
+                  "fields": [
+                    {
+                      "name": "branch_name",
+                      "expression": "`branch_name`"
+                    },
+                    {
+                      "name": "loan_count",
+                      "expression": "`loan_count`"
+                    },
+                    {
+                      "name": "total_disbursement",
+                      "expression": "`total_disbursement`"
+                    },
+                    {
+                      "name": "total_outstanding_principal",
+                      "expression": "`total_outstanding_principal`"
+                    },
+                    {
+                      "name": "npa_loan_count",
+                      "expression": "`npa_loan_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "branch_name",
+                    "displayName": "Branch"
+                  },
+                  {
+                    "fieldName": "loan_count",
+                    "displayName": "Loans",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_disbursement",
+                    "displayName": "Disbursed",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_outstanding_principal",
+                    "displayName": "Outstanding",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "npa_loan_count",
+                    "displayName": "NPA",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "fixed",
+                        "places": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Branch loan portfolio"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "dashboard_index_glossary",
+      "displayName": "Index & Glossary",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "glossary_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Index & Glossary"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_intro",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Use this page as the dashboard index. It explains every metric, visual, filter, and source dataset used across the Banking dashboard."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_page_index",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Page Index\n\n- Page 1: Overview - portfolio-wide banking KPIs, transaction trends, loan status mix, and AUM trend.\n- Page 2: Customer & Branch Deep-Dive - segment contribution, product holding mix, top customers, and branch loan portfolio.\n- Page 3: Index & Glossary - definitions for all filters, metrics, visuals, and datasets."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_filters",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Filters\n\n- Transaction date: Date range filter applied to transaction, loan, balance, and holding date fields where available.\n- Customer segment: Multi-select filter for customer segment across transaction, loan, balance, and holding datasets.\n- Channel type: Multi-select filter for transaction channel type, such as Digital or branch-assisted channels."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_kpis",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## KPI Glossary\n\n- Total txn value: Sum of total transaction value from transactions overview, displayed in INR.\n- Transaction success rate: Successful transaction count divided by total transaction count.\n- Digital txn rate: Digital transaction count divided by total transaction count.\n- Avg ticket size: Total transaction value divided by transaction count.\n- Avg products per customer: Distinct product holdings divided by distinct customers in holdings data.\n- Gross NPA ratio: NPA outstanding divided by total outstanding principal.\n- Total AUM latest month: Closing balance for the latest available month-end.\n- Loan book outstanding: Sum of total outstanding principal from loans overview."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_visuals_overview",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Visual Glossary - Overview\n\n- Transaction value by channel: Bar chart comparing transaction value by channel name and channel type.\n- Loan portfolio by status: Pie chart showing total outstanding principal by loan status.\n- AUM trend - monthly closing balance: Line chart tracking closing balance by month-end date."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_visuals_deep_dive",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Visual Glossary - Customer & Branch Deep-Dive\n\n- Txn value by customer segment: Pie chart showing transaction value distribution by customer segment.\n- Holdings value by product type: Bar chart comparing product holding value by product type, shown in lakhs.\n- Top 10 customers: Table listing customers with transaction count, total value, average ticket, and share of total.\n- Branch loan portfolio: Table ranking branches by loan count, disbursement, outstanding principal, and NPA loan count."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_dataset_sources",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Source Dataset Index\n\n- ds_transactions_overview: Transaction date, customer segment, channel type/name, transaction value, transaction counts, success counts, digital counts, and value in lakhs.\n- ds_loans_overview: Disbursement date, customer segment, loan status, branch, loan counts, NPA counts, disbursement, outstanding principal, and NPA outstanding.\n- ds_gross_npa_ratio_kpi: Dedicated KPI dataset for gross NPA ratio.\n- ds_balances_overview: Month-end balance data, total closing balance, and latest-month closing balance.\n- ds_holdings_kpi_raw: Raw holding and customer grain for average products per customer.\n- ds_txn_value_by_segment: Transaction value summarized by customer segment.\n- ds_holdings_by_product_type: Holding value summarized by product type.\n- ds_top_customers: Top 10 customers by transaction value with average ticket and share of total.\n- ds_branch_loan_portfolio: Top branch loan portfolio summary by disbursement."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 12,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "glossary_units_notes",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Units and Reading Notes\n\n- Currency values are displayed in INR unless the visual label explicitly says lakhs.\n- Percentage metrics are ratios rendered as percentages.\n- Lakhs are calculated as raw value divided by 100,000.\n- Latest-month AUM uses the maximum month_end_date available in the balance dataset.\n- Tables are pre-ranked in their source datasets and currently display the top 10 records."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 37,
+            "width": 12,
+            "height": 5
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-Build a 2-page dashboard called "BiLayerFinal" using the tables in reportingbus schema. Use the measures, descriptions, schema and relationships in yaml files , inside finalsemantic folder .
+Build a 2-page dashboard called "Showcase" using the tables in reportingbus schema. Use the measures, descriptions, schema and relationships in yaml files , inside finalsemantic folder .
 use aibidashboard skills and gaurdrails
 
 ---PAGE 1: OVERVIEW---
