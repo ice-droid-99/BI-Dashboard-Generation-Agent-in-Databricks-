@@ -1,0 +1,33 @@
+Build a 2-page dashboard called "Banking" using the tables in banking catalog - gold schema. also leverage metrics view present inside it as and business definitions semantic layer, Page 1 '
+'Overview' : 
+FILTERS (top of page, 3 slicers):
+ Date filter with two modes the user can toggle — one that filters by exact date, and one that filters by month and year combined (e.g. "Jan 2025"). Both should affect all visuals on the page.
+counters: 1.Total txn value,
+2. Success rate of txn, 3.Digital txn rate
+4. avg ticket size per txn in rupee, 5. Avg products/customer , 6.gross npa ratio,7.Total AUM ,8. Loan book.               bar chart Transaction value by channel,x axis  in lakhs,    Loan portfolio by status donut chart, AUM trend line chart — monthly closing balance (all 60 accounts),   Page 2 — customer & branch deep-dive    
+Txn value by customer segment pie chart ,Holdings value by product type bar chart, table with colums (Customer,Segment	Txns,Total value,Avg ticket,Share of total in percent), table : Branch-wise loan portfolio
+All 10 branches  |  Disbursed vs outstanding vs NPA count.columns( Branch	,Loans,	Disbursed	,Outstanding	,NPA	,Outstanding bar)
+
+
+--Full Prompt
+Build a 3-page AI/BI dashboard named "Banking" using catalog: banking, schema: gold.
+Use metric views for references starts with mv_* as the semantic layer. Use MEASURE() syntax. Fall back to gold tables only if a metric is missing.
+PAGE 1 — Overview
+Filters (affect all visuals on this page):
+(1) Date range filter on transaction_date. (2) Customer segment multi-select: Mass Market, Affluent, High Net Worth, Premier. (3) Channel type multi-select: Digital, Assisted, Self-Service.
+8 KPI counters in one row:
+Total txn value (currency) | Transaction success rate (%) | Digital txn rate (%) | Avg ticket size (currency) | Avg products per customer (2 decimals) | Gross NPA ratio (%) | Total AUM latest month (currency) | Loan book outstanding (currency)
+Charts:
+- Horizontal bar: Transaction value by channel. X axis = total_transaction_value divided by 100000 labeled "Value (Lakhs)". Sort descending.
+- Pie: Loan portfolio by status using total_outstanding_principal. Show percentage labels on slices.
+- Line: AUM trend — X axis = month_end_date grouped by month ascending, Y axis = total_closing_balance. Title: "AUM trend — monthly closing balance".
+PAGE 2 — Customer & Branch Deep-Dive (no filters)
+Charts:
+- Pie: Txn value by customer segment — show percentage on each slice.
+- Horizontal bar: Holdings value by product type — X axis = total_holding_value divided by 100000 labeled "Value (Lakhs)". Sort descending.
+Tables:
+- Top 10 customers: columns → Customer (full_name), Segment, Txns (transaction_count), Total value (total_transaction_value), Avg ticket (average_transaction_value), Share of total (customer total / grand total * 100 as %). Sort by Total value desc. No row total.
+- Branch loan portfolio (all 10 branches): columns → Branch (branch_name), Loans (loan_count), Disbursed (total_disbursement), Outstanding (total_outstanding_principal), NPA (npa_loan_count). Sort by Disbursed desc.
+Rules: Standard number format (1,000,000). Currency prefix symbol. Sentence case titles. No cross-fact joins — use CTEs if needed. date_key is INT YYYYMMDD.
+
+also add Page 3 : Index of all KPI and Visuals used

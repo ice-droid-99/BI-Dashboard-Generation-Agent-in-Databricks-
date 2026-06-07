@@ -1,0 +1,16 @@
+product_id,product_code,product_name,product_type,product_category,key_feature,business_unit
+1,SAV001,Basic Savings,Savings Account,Retail,No minimum balance,Retail Banking
+2,SAV002,Premium Savings,Savings Account,Retail,5% interest rate,Retail Banking
+3,CUR001,Current Basic,Current Account,Business,Unlimited transactions,Business Banking
+4,CUR002,Current Plus,Current Account,Business,Overdraft facility,Business Banking
+5,FD001,Fixed Deposit 1Y,Fixed Deposit,Investment,7.5% p.a.,Wealth
+6,FD002,Fixed Deposit 3Y,Fixed Deposit,Investment,8.0% p.a.,Wealth
+7,RD001,Recurring Deposit,Recurring Deposit,Investment,7.0% p.a.,Wealth
+8,HL001,Home Loan,Loan,Retail,8.5% p.a. floating,Loans
+9,PL001,Personal Loan,Loan,Retail,12% p.a.,Loans
+10,AL001,Auto Loan,Loan,Retail,9.5% p.a.,Loans
+11,CC001,Platinum Card,Credit Card,Retail,5% cashback,Cards
+12,CC002,Gold Card,Credit Card,Retail,2% cashback,Cards
+13,MF001,Equity Mutual Fund,Mutual Fund,Investment,Market linked,Wealth
+14,INS001,Term Insurance,Insurance,Retail,Life cover 1Cr,Insurance
+15,INS002,Health Insurance,Insurance,Retail,Family floater 10L,Insurance

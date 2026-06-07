@@ -1,0 +1,18 @@
+TableA,ColumnA,TableB,ColumnB,Cardinality
+fact_transactions,account_id,dim_account,account_id,Many to One
+fact_transactions,customer_id,dim_customer,customer_id,Many to One
+fact_transactions,date_key,dim_date,date_key,Many to One
+fact_transactions,channel_id,dim_channel,channel_id,Many to One
+fact_transactions,transaction_type_id,dim_transaction_type,transaction_type_id,Many to One
+fact_loans,customer_id,dim_customer,customer_id,Many to One
+fact_loans,product_id,dim_product,product_id,Many to One
+fact_loans,disbursed_branch_id,dim_branch,branch_id,Many to One
+fact_loans,date_key,dim_date,date_key,Many to One
+fact_account_balance_snapshot,account_id,dim_account,account_id,Many to One
+fact_account_balance_snapshot,customer_id,dim_customer,customer_id,Many to One
+fact_account_balance_snapshot,date_key,dim_date,date_key,Many to One
+fact_product_holdings,customer_id,dim_customer,customer_id,Many to One
+fact_product_holdings,product_id,dim_product,product_id,Many to One
+fact_product_holdings,date_key,dim_date,date_key,Many to One
+dim_account,customer_id,dim_customer,customer_id,Many to One
+dim_account,branch_id,dim_branch,branch_id,Many to One

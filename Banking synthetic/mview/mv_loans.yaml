@@ -1,0 +1,246 @@
+version: 1.1
+
+source: banking.gold.fact_loans
+
+joins:
+  - name: customer
+    source: banking.gold.dim_customer
+    "on": source.customer_id = customer.customer_id
+  - name: product
+    source: banking.gold.dim_product
+    "on": source.product_id = product.product_id
+  - name: branch
+    source: banking.gold.dim_branch
+    "on": source.disbursed_branch_id = branch.branch_id
+  - name: cal
+    source: banking.gold.dim_date
+    "on": source.date_key = cal.date_key
+
+comment: "Loan portfolio metric view. Covers disbursements, outstanding balances,\
+  \ NPA analysis, EMI health, and portfolio risk."
+
+dimensions:
+  - name: disbursement_date
+    expr: source.disbursement_date
+    display_name: Disbursement date
+  - name: disbursement_month
+    expr: "DATE_TRUNC('MONTH', source.disbursement_date)"
+    display_name: Disbursement month
+    synonyms:
+      - loan booking month
+      - origination month
+  - name: disbursement_year
+    expr: YEAR(source.disbursement_date)
+    display_name: Disbursement year
+    synonyms:
+      - loan year
+      - origination year
+  - name: disbursement_quarter
+    expr: "DATE_TRUNC('QUARTER', source.disbursement_date)"
+    display_name: Disbursement quarter
+  - name: loan_status
+    expr: source.loan_status
+    display_name: Loan status
+    synonyms:
+      - status
+      - portfolio status
+      - active closed NPA
+  - name: loan_purpose
+    expr: source.loan_purpose
+    display_name: Loan purpose
+    synonyms:
+      - purpose
+      - loan reason
+      - home auto personal
+  - name: product_name
+    expr: product.product_name
+    display_name: Product name
+    synonyms:
+      - loan type
+      - product
+  - name: product_type
+    expr: product.product_type
+    display_name: Product type
+    synonyms:
+      - loan category
+  - name: tenure_bucket
+    expr: |-
+      CASE
+        WHEN source.tenure_months <= 12  THEN 'Short term (≤1Y)'
+        WHEN source.tenure_months <= 36  THEN 'Medium term (1-3Y)'
+        WHEN source.tenure_months <= 84  THEN 'Long term (3-7Y)'
+        ELSE                                  'Very long term (>7Y)'
+      END
+    display_name: Tenure bucket
+    synonyms:
+      - loan duration
+      - tenure range
+  - name: dpd_bucket
+    expr: |-
+      CASE
+        WHEN source.days_past_due = 0   THEN 'Current'
+        WHEN source.days_past_due <= 30 THEN 'DPD 1-30'
+        WHEN source.days_past_due <= 60 THEN 'DPD 31-60'
+        WHEN source.days_past_due <= 90 THEN 'DPD 61-90'
+        ELSE                                 'NPA (>90 DPD)'
+      END
+    comment: Days past due classification
+    display_name: DPD bucket
+    synonyms:
+      - overdue bucket
+      - delinquency bucket
+      - DPD band
+  - name: loan_size_tier
+    expr: |-
+      CASE
+        WHEN source.principal_amount < 300000   THEN 'Small (<3L)'
+        WHEN source.principal_amount < 1000000  THEN 'Medium (3L-10L)'
+        WHEN source.principal_amount < 3000000  THEN 'Large (10L-30L)'
+        ELSE                                         'Jumbo (>30L)'
+      END
+    display_name: Loan size tier
+    synonyms:
+      - loan ticket size
+      - principal bucket
+  - name: interest_rate_band
+    expr: |-
+      CASE
+        WHEN source.interest_rate_pct < 9.0  THEN 'Low (<9%)'
+        WHEN source.interest_rate_pct < 12.0 THEN 'Mid (9-12%)'
+        ELSE                                      'High (>12%)'
+      END
+    display_name: Interest rate band
+    synonyms:
+      - rate bucket
+      - ROI band
+  - name: customer_segment
+    expr: customer.segment
+    display_name: Customer segment
+    synonyms:
+      - segment
+      - HNW affluent mass premier
+  - name: customer_city
+    expr: customer.city
+    display_name: City
+    synonyms:
+      - location
+      - geography
+  - name: customer_state
+    expr: customer.state
+    display_name: State
+  - name: customer_occupation
+    expr: customer.occupation
+    display_name: Occupation
+    synonyms:
+      - salaried self-employed business
+  - name: disbursed_branch
+    expr: branch.branch_name
+    display_name: Disbursed branch
+    synonyms:
+      - branch
+      - originating branch
+
+measures:
+  - name: loan_count
+    expr: COUNT(DISTINCT source.loan_id)
+    display_name: Loan count
+    synonyms:
+      - number of loans
+      - loan accounts
+      - portfolio size
+  - name: active_loan_count
+    expr: COUNT(DISTINCT source.loan_id) FILTER (WHERE source.loan_status = 'Active')
+    display_name: Active loans
+    synonyms:
+      - live loans
+      - open loans
+  - name: npa_loan_count
+    expr: COUNT(DISTINCT source.loan_id) FILTER (WHERE source.loan_status = 'NPA')
+    display_name: NPA loan count
+    synonyms:
+      - non performing loans
+      - bad loans
+      - stressed assets count
+  - name: total_disbursement
+    expr: SUM(source.principal_amount)
+    display_name: Total disbursement (INR)
+    synonyms:
+      - disbursed amount
+      - loans booked
+      - origination volume
+  - name: average_loan_size
+    expr: "ROUND(SUM(source.principal_amount) / NULLIF(COUNT(DISTINCT source.loan_id),\
+      \ 0), 2)"
+    display_name: Avg loan size (INR)
+    synonyms:
+      - average ticket size
+      - mean loan amount
+  - name: total_outstanding_principal
+    expr: SUM(source.outstanding_principal)
+    comment: Total loan book — principal yet to be repaid
+    display_name: Outstanding principal (INR)
+    synonyms:
+      - loan book
+      - AUM loans
+      - outstanding balance
+      - book size
+  - name: npa_outstanding
+    expr: SUM(source.outstanding_principal) FILTER (WHERE source.loan_status = 'NPA')
+    display_name: NPA outstanding (INR)
+    synonyms:
+      - NPA book
+      - bad book
+      - stressed outstanding
+  - name: gross_npa_ratio
+    expr: |-
+      ROUND(
+        SUM(source.outstanding_principal) FILTER (WHERE source.loan_status = 'NPA')
+        / NULLIF(SUM(source.outstanding_principal), 0) * 100
+      , 2)
+    comment: NPA outstanding / total outstanding. Key RBI regulatory metric.
+    display_name: Gross NPA ratio (%)
+    synonyms:
+      - GNPA
+      - NPA ratio
+      - NPA %
+      - bad loan ratio
+  - name: npa_loan_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.loan_id) FILTER (WHERE source.loan_status = 'NPA')
+        / NULLIF(COUNT(DISTINCT source.loan_id), 0) * 100
+      , 2)
+    display_name: NPA loan rate (%)
+    synonyms:
+      - NPA account rate
+      - default rate
+  - name: total_emi_book
+    expr: SUM(source.emi_amount)
+    display_name: Total EMI book (INR/month)
+    synonyms:
+      - monthly EMI
+      - EMI run rate
+      - monthly collection expected
+  - name: average_interest_rate
+    expr: "ROUND(AVG(source.interest_rate_pct), 2)"
+    display_name: Avg interest rate (%)
+    synonyms:
+      - average ROI
+      - blended rate
+      - portfolio yield
+  - name: average_tenure_months
+    expr: "ROUND(AVG(source.tenure_months), 1)"
+    display_name: Avg tenure (months)
+    synonyms:
+      - average loan duration
+      - mean tenure
+  - name: repayment_progress_pct
+    expr: |-
+      ROUND(
+        SUM(source.installments_paid)
+        / NULLIF(SUM(source.tenure_months), 0) * 100
+      , 2)
+    display_name: Repayment progress (%)
+    synonyms:
+      - collection efficiency
+      - repayment rate

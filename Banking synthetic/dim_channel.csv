@@ -1,0 +1,7 @@
+channel_id,channel_name,channel_type,availability,digital_adoption_score
+1,Mobile Banking,Digital,24x7,High
+2,Internet Banking,Digital,24x7,High
+3,ATM,Self-Service,24x7,Medium
+4,Branch,Assisted,Business Hours,Low
+5,Phone Banking,Assisted,24x7,Medium
+6,UPI,Digital,24x7,High

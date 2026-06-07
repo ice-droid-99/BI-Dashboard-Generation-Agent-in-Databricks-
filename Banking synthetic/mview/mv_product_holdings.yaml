@@ -1,0 +1,166 @@
+version: 1.1
+
+source: banking.gold.fact_product_holdings
+
+joins:
+  - name: customer
+    source: banking.gold.dim_customer
+    "on": source.customer_id = customer.customer_id
+  - name: product
+    source: banking.gold.dim_product
+    "on": source.product_id = product.product_id
+  - name: cal
+    source: banking.gold.dim_date
+    "on": source.date_key = cal.date_key
+
+comment: "Product holdings and cross-sell metric view. Covers product penetration,\
+  \ wallet share, revenue per customer, and portfolio mix."
+
+dimensions:
+  - name: acquisition_date
+    expr: source.acquisition_date
+    display_name: Acquisition date
+    synonyms:
+      - onboarding date
+      - product start date
+  - name: acquisition_month
+    expr: "DATE_TRUNC('MONTH', source.acquisition_date)"
+    display_name: Acquisition month
+  - name: acquisition_year
+    expr: YEAR(source.acquisition_date)
+    display_name: Acquisition year
+  - name: is_active
+    expr: |-
+      CASE source.is_active
+        WHEN 1 THEN 'Active'
+        ELSE 'Inactive'
+      END
+    display_name: Holding status
+    synonyms:
+      - active inactive
+      - product status
+  - name: product_name
+    expr: product.product_name
+    display_name: Product
+    synonyms:
+      - product name
+      - scheme
+  - name: product_type
+    expr: product.product_type
+    display_name: Product type
+    synonyms:
+      - savings loan card insurance
+      - product category
+  - name: product_category
+    expr: product.product_category
+    display_name: Product category
+    synonyms:
+      - retail business wealth
+      - business unit
+  - name: business_unit
+    expr: product.business_unit
+    display_name: Business unit
+    synonyms:
+      - BU
+      - division
+      - retail banking wealth loans
+  - name: customer_segment
+    expr: customer.segment
+    display_name: Customer segment
+    synonyms:
+      - segment
+      - HNW affluent mass premier
+  - name: customer_city
+    expr: customer.city
+    display_name: City
+  - name: customer_state
+    expr: customer.state
+    display_name: State
+  - name: customer_occupation
+    expr: customer.occupation
+    display_name: Occupation
+  - name: customer_gender
+    expr: customer.gender
+    display_name: Gender
+
+measures:
+  - name: holding_count
+    expr: COUNT(DISTINCT source.holding_id)
+    display_name: Product holdings
+    synonyms:
+      - number of holdings
+      - products sold
+      - policies
+  - name: active_holding_count
+    expr: COUNT(DISTINCT source.holding_id) FILTER (WHERE source.is_active = 1)
+    display_name: Active holdings
+    synonyms:
+      - live products
+      - active policies
+  - name: unique_customers_with_holdings
+    expr: COUNT(DISTINCT source.customer_id)
+    display_name: Customers with holdings
+    synonyms:
+      - product holders
+      - customers
+  - name: total_holding_value
+    expr: SUM(source.holding_value)
+    display_name: Total holding value (INR)
+    synonyms:
+      - AUM
+      - portfolio value
+      - total invested
+      - book value
+  - name: total_annual_revenue
+    expr: SUM(source.annual_revenue_generated)
+    display_name: Annual revenue from holdings (INR)
+    synonyms:
+      - product revenue
+      - fee income from products
+      - income generated
+  - name: avg_products_per_customer
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.holding_id)
+        / NULLIF(COUNT(DISTINCT source.customer_id), 0)
+      , 2)
+    comment: Key cross-sell metric. Industry benchmark is 3-4 for retail banking.
+    display_name: Avg products per customer
+    synonyms:
+      - PPC
+      - products per customer
+      - cross sell ratio
+      - wallet depth
+  - name: avg_holding_value_per_customer
+    expr: |-
+      ROUND(
+        SUM(source.holding_value)
+        / NULLIF(COUNT(DISTINCT source.customer_id), 0)
+      , 2)
+    display_name: Avg holding value per customer (INR)
+    synonyms:
+      - wallet share
+      - AUM per customer
+      - revenue per customer
+  - name: avg_revenue_per_customer
+    expr: |-
+      ROUND(
+        SUM(source.annual_revenue_generated)
+        / NULLIF(COUNT(DISTINCT source.customer_id), 0)
+      , 2)
+    display_name: Avg annual revenue per customer (INR)
+    synonyms:
+      - ARPU
+      - revenue per customer
+      - customer profitability
+  - name: product_penetration_rate
+    expr: |-
+      ROUND(
+        COUNT(DISTINCT source.holding_id) FILTER (WHERE source.is_active = 1)
+        / NULLIF(COUNT(DISTINCT source.customer_id), 0) * 100
+      , 2)
+    display_name: Product penetration rate (%)
+    synonyms:
+      - penetration
+      - cross sell penetration
+      - product adoption %
