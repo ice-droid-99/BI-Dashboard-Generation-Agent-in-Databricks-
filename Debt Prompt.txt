@@ -1,11 +1,11 @@
-Build a 2-page dashboard called "Showcase" using the tables in reportingbus schema. Use the measures, descriptions, schema and relationships in yaml files , inside finalsemantic folder .
-use aibidashboard skills and gaurdrails
-
+Build a 2-page dashboard called "FinalBi" using the tables in reportingbus schema. Use the relationship definitions and datatypes , also manually typed measures and table description in semantic_layer folder.
+along with main skills folder , also use guardrails folder
 ---PAGE 1: OVERVIEW---
 FILTERS (top of page, 3 slicers):
 1. Date filter with two modes the user can toggle — one that filters by exact date, and one that filters by month and year combined (e.g. "Jan 2025"). Both should affect all visuals on the page.
 2. Team filter — list of all sales teams.
 3. Rep filter — list of all sales reps, ideally cascading so it only shows reps in the selected team.
+
 KPI CARDS (single row below filters, 9 cards):
 - Total gross enrollments
 - Total net enrollments
@@ -16,9 +16,11 @@ KPI CARDS (single row below filters, 9 cards):
 - Average days to cancel
 - Total gross enrolled debt in dollars
 - Average debt per enrollment (gross debt divided by gross enrollments)
+
 VISUALS (below KPI row, 2 side by side):
 Left — Bar chart: Team performance. For each team show two grouped bars — total gross enrollments and total gross enrolled debt. Use a dual axis if needed so both metrics are readable (debt in $M, enrollments as count). Label each bar with its value.
 Right — Donut chart: Cancellation breakdown by reason. Show count and % for each reason. Use red/amber tones.
+
 All visuals respond to the 3 slicers above.
 Color rules: green ≥100% of target, amber 80–99%, red <80%. Cancellation metrics in red/amber. Enrollment bars in neutral blue. Debt bars in teal/slate.
 
