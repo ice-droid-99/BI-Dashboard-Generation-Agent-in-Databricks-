@@ -16,12 +16,16 @@ Create Databricks AI/BI dashboards (formerly Lakeview dashboards). **Follow thes
 │  STEP 1: Get table schemas via get_table_stats_and_schema(catalog, schema)  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  STEP 2: Write SQL queries for each dataset                        │
+│          - Choose source by prompt: tables vs metric views vs mix  │
+│          - Document KPI numerator/denominator before coding        │
 ├─────────────────────────────────────────────────────────────────────┤
 │  STEP 3: TEST EVERY QUERY via execute_sql() ← DO NOT SKIP!         │
 │          - If query fails, FIX IT before proceeding                │
 │          - Verify column names match what widgets will reference   │
 │          - Verify data types are correct (dates, numbers, strings) │
 │          - If user provided expected values, cross-check results   │
+│          - For counters, validate numerator, denominator, and      │
+│            final formula separately                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │  STEP 4: Build dashboard JSON using ONLY verified queries          │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -44,6 +48,10 @@ When building dashboards, also apply these business validation rules:
 4. **Formatting validation**: Don't assume compact currency formatting is acceptable. Check user requirements for full vs abbreviated display.
 
 5. **Display vs raw datasets**: Use raw datasets for aggregation/filtering, display-shaped datasets only when user expects presentation-ready formatted strings.
+
+6. **Prompt-directed source selection**: If the prompt explicitly says to use tables, metric views, YAML-defined measures, or a mix, follow that instruction exactly. Do not override it with a default preference.
+
+7. **KPI re-aggregation safety**: Treat metric-view measures for ratios, rates, averages, per-customer metrics, penetration metrics, and latest-period KPIs as unsafe until proven with SQL.
 
 ## Available MCP Tools
 
@@ -111,6 +119,8 @@ manage_dashboard(action="list")
 - SELECT must include all dimensions needed by widgets and all derived columns via `AS` aliases
 - Put ALL business logic (CASE/WHEN, COALESCE, ratios) into the dataset SELECT with explicit aliases
 - **Contract rule**: Every widget `fieldName` must exactly match a dataset column or alias
+- **Source rule**: If the prompt says `use metric views, fall back to tables only if needed`, start from metric views for additive measures and governed breakdowns, but use tables for KPIs that require exact row-level numerators/denominators or dimensions the metric view does not expose
+- **Counter rule**: For KPI counters, prefer datasets whose grain makes the business formula auditable; do not rely on re-aggregated semantic ratios or averages unless you validated that behavior explicitly
 
 ### 2) WIDGET FIELD EXPRESSIONS
 
@@ -237,6 +247,8 @@ Before deploying, verify:
 9. Percent values are 0-1 (not 0-100)
 10. SQL uses Spark syntax (date_sub, not INTERVAL)
 11. **All SQL queries tested via `execute_sql` and return expected data**
+12. KPI numerator and denominator were validated separately when applicable
+13. Prompt-directed source choice was honored explicitly: tables, metric views, YAML measures, or mixed fallback
 
 ---
 
